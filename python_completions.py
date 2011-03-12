@@ -93,6 +93,7 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
             except Exception, e:
                 print e            
             window = sublime.active_window()
+
             if found_resource is not None:
                 path = found_resource.real_path+":"+str(line)
                 window.open_file(path,sublime.ENCODED_POSITION)
