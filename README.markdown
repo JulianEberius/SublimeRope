@@ -4,7 +4,7 @@
 Integrates the Python refactoring/completion framework Rope with Sublime Text 2.
 For now, it adds Rope completions to the ST2 completion menu, and adds a command goto_python_definition. It is a port of RopeMate, which I wrote for TextMate, and does not yet include all the features of RopeMate (or Rope for that matter).
 
-I have only tested it on OSX so far.
+I have only tested it on the latest dev build (2045) on OSX so far.
 
 Copyright (C) 2010 Julian Eberius
 
