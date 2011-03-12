@@ -11,11 +11,7 @@ Copyright (C) 2010 Julian Eberius
 USAGE
 -----
 
-First you need to install Rope so that ST2 can find it. On OSX I had to install it for the system python, since ST2 seems to use that.
-
-    pip2.6 install rope
-
-Then unzip / git clone the folder SublimeRope into ST2's Packages folder.
+Just unzip / git clone the folder SublimeRope into ST2's Packages folder.
 
 *IMPORTANT*: Since ST2 for the moment has no API to find or mark the project root folder, you have to mark your project's root manually, so that Rope knows which folders to scan for completions / definitions.
 
