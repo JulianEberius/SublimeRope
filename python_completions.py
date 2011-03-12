@@ -2,7 +2,7 @@ import sublime_plugin, sublime
 import ropemate
 from rope.contrib import codeassist
 import rope
-import glob
+import rope.base.default_config
 
 def match(rex, str):
     m = rex.match(str)
@@ -28,7 +28,7 @@ class PythonCompletions(sublime_plugin.EventListener):
     # def identifier_before_dot(self):
     #     if 'TM_CURRENT_WORD' not in os.environ:
     #         os.environ['TM_CURRENT_WORD'] = os.environ.get('TM_CURRENT_LINE')
-        
+
     #     word = current_word(r"^[\.A-Za-z_0-9]*", direction='left')
     #     if word:
     #         return word[:-1]
@@ -47,9 +47,9 @@ class PythonCompletions(sublime_plugin.EventListener):
     #             module = __import__(name)
     #         except ImportError, e:
     #             return [], " %s." % e
-            
+
     #         names = dir(module)
-            
+
     #         for name in names:
     #             if not name.startswith("__"):
     #                 p = rope.contrib.codeassist.CompletionProposal(
@@ -64,7 +64,7 @@ class PythonCompletions(sublime_plugin.EventListener):
     #                 else:
     #                     p.type = 'instance'
     #                 result.append(p)
-            
+
     #         # if module is a package, check the direc tory
     #         if hasattr(module,"__path__"):
     #           in_dir_names = [os.path.split(n)[1] for n in glob.glob(os.path.join(module.__path__[0], "*"))]
@@ -75,7 +75,7 @@ class PythonCompletions(sublime_plugin.EventListener):
     #                       n, None, rope.base.pynames.UnboundName()))
     #     except Exception, e:
     #         return [], e
-        
+
     #     return result, None
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
@@ -91,7 +91,7 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                 # fail silently -> the user selected empty space etc
                 pass
             except Exception, e:
-                print e            
+                print e
             window = sublime.active_window()
 
             if found_resource is not None:
