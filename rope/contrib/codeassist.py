@@ -1,5 +1,5 @@
 import keyword
-import sys
+import sys, os, glob
 import warnings
 
 import rope.base.codeanalyze
@@ -330,6 +330,7 @@ class _PythonCodeAssist(object):
         result = {}
         found_pyname = rope.base.evaluate.eval_str(holding_scope,
                                                    self.expression)
+
         if found_pyname is not None:
             element = found_pyname.get_object()
             compl_scope = 'attribute'
@@ -339,6 +340,22 @@ class _PythonCodeAssist(object):
             for name, pyname in element.get_attributes().items():
                 if name.startswith(self.starting):
                     result[name] = CompletionProposal(name, compl_scope, pyname)
+
+            # add simple directory completions
+            if isinstance(element, pyobjectsdef.PyPackage):
+                dir_completions = self._add_simple_directory_completions(element.resource.path)
+                for name, proposal in dir_completions.items():
+                    if name not in result:
+                        result[name] = proposal
+        return result
+
+    def _add_simple_directory_completions(self, package_dir):
+        result = {}
+        in_dir_names = [os.path.split(n)[1] for n in glob.glob(os.path.join(package_dir, "*"))]
+        in_dir_names = set(os.path.splitext(n)[0] for n in in_dir_names if "__init__" not in n)
+        for n in in_dir_names:
+            result[n] = rope.contrib.codeassist.CompletionProposal(
+                n, "imported", rope.base.pynames.UnboundName())
         return result
 
     def _undotted_completions(self, scope, result, lineno=None):

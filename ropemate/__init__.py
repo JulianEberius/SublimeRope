@@ -2,7 +2,6 @@ import os, sys
 import sublime
 
 from rope.base import project,libutils
-
 from ropemate.path import update_python_path
 from rope.contrib import autoimport
 
@@ -18,10 +17,8 @@ class ropecontext(object):
     def __enter__(self):
         file_path = self.view.file_name()
         project_dir = self.find_ropeproject(file_path)
-        print project_dir
         if project_dir:
             self.project = project.Project(project_dir)
-            print "yea", project_dir
             # no use to have auto import for a single file project
             if not os.path.exists("%s/.ropeproject/globalnames" % project_dir):
                 importer = autoimport.AutoImport(project=self.project, observe=True)
@@ -38,9 +35,7 @@ class ropecontext(object):
                 ropefolder=None,projectroot=folder, ignored_resources=ignored_res)
         
         self.resource = libutils.path_to_resource(self.project, file_path)
-        
         update_python_path( self.project.prefs.get('python_path', []) )
-        
         self.input = self.view.substr(sublime.Region(0,self.view.size()))
         
         return self
