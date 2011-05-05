@@ -29,8 +29,6 @@ class PythonCompletions(sublime_plugin.EventListener):
             sorted_proposals = sorted(raw_proposals, key=lambda x:x.name)
         else:
             with ropemate.ropecontext(view) as context:
-                # sys.path.insert(0,"/Users/ebi/Applications/eclipse/plugins/org.python.pydev.debug_1.6.5.2011020317/pysrc")
-                # import pydevd;pydevd.settrace()
                 raw_proposals = codeassist.code_assist(context.project, context.input, loc, context.resource)
                 if len(raw_proposals) > 0:
                     sorted_proposals = codeassist.sorted_proposals(raw_proposals)

@@ -3,3 +3,4 @@
 .pydevproject
 python_debugger.py
 .project
+.DS_Store

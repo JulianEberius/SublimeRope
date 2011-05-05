@@ -528,8 +528,11 @@ class StarImport(object):
 
     def get_names(self):
         result = {}
-        imported = self.imported_module.get_object()
-        for name in imported:
-            if not name.startswith('_'):
-                result[name] = pynames.ImportedName(self.imported_module, name)
         return result
+        ### removed for SublimeRope -> Performance for star imports
+        ### is just to bad (e.g., when working with PyObjC)
+        # imported = self.imported_module.get_object()
+        # for name in imported:
+        #     if not name.startswith('_'):
+        #         result[name] = pynames.ImportedName(self.imported_module, name)
+        # return result
