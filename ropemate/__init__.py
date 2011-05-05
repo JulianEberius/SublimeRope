@@ -25,7 +25,7 @@ class ropecontext(object):
                 importer.generate_cache()
             if os.path.exists("%s/__init__.py" % project_dir):
                 sys.path.append(project_dir)
-            
+
         else:
             #create a single-file project (ignoring all other files in the file's folder)
             folder = os.path.dirname(file_path)
@@ -33,20 +33,20 @@ class ropecontext(object):
             ignored_res.remove(os.path.basename(file_path))
             self.project = project.Project(
                 ropefolder=None,projectroot=folder, ignored_resources=ignored_res)
-        
+
         self.resource = libutils.path_to_resource(self.project, file_path)
         update_python_path( self.project.prefs.get('python_path', []) )
+        print "PATH:", sys.path
         self.input = self.view.substr(sublime.Region(0,self.view.size()))
-        
+
         return self
-    
+
     def __exit__(self, type , value , traceback):
         if type is None:
             self.project.close()
 
     def find_ropeproject(self, file_dir):
         def traverse_upward(look_for, start_at="."):
-            print look_for, start_at
             p = os.path.abspath(start_at)
 
             while True:
