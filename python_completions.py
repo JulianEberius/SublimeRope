@@ -9,6 +9,7 @@ import glob
 import sys
 import re
 from rope.base.exceptions import ModuleSyntaxError
+from rope.base.taskhandle import TaskHandle
 
 
 class PythonCompletions(sublime_plugin.EventListener):
@@ -104,6 +105,7 @@ class PythonCompletions(sublime_plugin.EventListener):
 class PythonRefactorRename(sublime_plugin.TextCommand):
 
     def run(self, edit, block=False):
+        self.view.run_command("save")
         with ropemate.ropecontext(self.view) as context:
             self.sel = self.view.sel()[0]
             word = self.view.substr(self.view.word(self.sel.b))
@@ -116,10 +118,17 @@ class PythonRefactorRename(sublime_plugin.TextCommand):
         with ropemate.ropecontext(self.view) as context:
             if new_name is None or new_name == self.rename.old_name:
                 return
-
             changes = self.rename.get_changes(new_name, in_hierarchy=True)
-            context.project.do(changes)
-            self.view.show(self.sel)
+            self.handle = TaskHandle(name="rename_handle")
+            self.handle.add_observer(self.refactoring_done)
+            context.project.do(changes, task_handle=self.handle)
+
+    def refactoring_done(self):
+        percent_done = self.handle.current_jobset().get_percent_done()
+        if percent_done == 100:
+            # force reload... does not seem to work
+            pass
+
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):

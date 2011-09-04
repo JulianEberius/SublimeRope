@@ -16,21 +16,19 @@ Just unzip / git clone the folder SublimeRope into ST2's Packages folder.
 
 *IMPORTANT*: Since ST2 for the moment has no API to find or mark the project root folder, you have to mark your project's root manually, so that Rope knows which folders to scan for completions / definitions.
 
-Just create a folder named ".ropeproject" at the root of your project (Rope would do that anyway when a project is initialized).
+To do so, call the command "Rope: New Project" from the command palette. This will ask you for the
+project root directory and for the root of the virtualenv. Leave the second one empty if you don't use virtualenv.
 
-    cd /path/to/your/project
-    mkdir .ropeproject
+Of course, you need to set a key binding, e.g., add this to your user keybindings:
 
-Then edit any file in this folder or its subfolders and you should get completions, and goto_python_definition should work. Of course, you need to set a key binding, e.g., add this to your user keybindings:
-
-    { "keys": ["super+f3"], "command": "goto_python_definition"}
+    { "keys": ["super+f3"], "command": "goto_python_definition"},
 
 Getting all completions to work
 -------------------------------
 
-Basically, anthing you want completions for has to be on your python path, which you can extend in .ropeprojectconfig.py.
+Basically, anthing you want completions for has to be on your python path, which you can extend in <PROJECT_DIR>/.ropeproject/config.py.
 
-If you are using virtualenv for your project, add the path to the virtualenv in .ropeproject/config.py (there should be a commented-out line already in the file in set_prefs).
+If you are using virtualenv for your project, add the path to the virtualenv in .ropeproject/config.py (there should be a commented-out line already in the file in set_prefs). *UPDATE*: the "Rope: New Project" command should do this for you.
 
     prefs.add('python_path', '/Users/ebi/dev/project/lib/python2.7/site-packages/')
 
@@ -49,6 +47,8 @@ Refactoring functions
 SublimeRope now supports the Rope refactoring function "Rename", which renames an identifier (function, class, variable etc.) throughout your project. To use it, you will need to set a keybinding:
 
     { "keys": ["alt+super+r"], "command": "python_refactor_rename"}
+
+Sometimes the view will not refresh automatically, switch tabs (or do something similar) to refresh in this case. This is still work in progress.
 
 
 Donations
