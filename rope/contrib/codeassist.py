@@ -1,5 +1,5 @@
 import keyword
-import sys, os, glob
+import sys
 import warnings
 
 import rope.base.codeanalyze
@@ -153,12 +153,8 @@ class CompletionProposal(object):
 
     def __init__(self, name, scope, pyname=None):
         self.name = name
-        self.scope = scope
         self.pyname = pyname
-        if pyname is not None:
-            self.type = self._get_type()
-        else:
-            self.type = None
+        self.scope = self._get_scope(scope)
 
     def __str__(self):
         return '%s (%s, %s)' % (self.name, self.scope, self.type)
@@ -180,10 +176,10 @@ class CompletionProposal(object):
             if isinstance(pyobject, pyobjects.AbstractFunction):
                 return pyobject.get_param_names()
 
-    def _get_type(self):
+    @property
+    def type(self):
         pyname = self.pyname
         if isinstance(pyname, builtins.BuiltinName):
-            self.scope = 'builtin'
             pyobject = pyname.get_object()
             if isinstance(pyobject, builtins.BuiltinFunction):
                 return 'function'
@@ -194,18 +190,23 @@ class CompletionProposal(object):
                  isinstance(pyobject, builtins.BuiltinName):
                 return 'instance'
         elif isinstance(pyname, pynames.ImportedModule):
-            self.scope = 'imported'
             return 'module'
         elif isinstance(pyname, pynames.ImportedName) or \
            isinstance(pyname, pynames.DefinedName):
-            if isinstance(pyname, pynames.ImportedName):
-                self.scope = 'imported'
             pyobject = pyname.get_object()
             if isinstance(pyobject, pyobjects.AbstractFunction):
                 return 'function'
             if isinstance(pyobject, pyobjects.AbstractClass):
                 return 'class'
         return 'instance'
+
+    def _get_scope(self, scope):
+        if isinstance(self.pyname, builtins.BuiltinName):
+            return 'builtin'
+        if isinstance(self.pyname, pynames.ImportedModule) or \
+           isinstance(self.pyname, pynames.ImportedName):
+            return 'imported'
+        return scope
 
     def get_doc(self):
         """Get the proposed object's docstring.
@@ -330,7 +331,6 @@ class _PythonCodeAssist(object):
         result = {}
         found_pyname = rope.base.evaluate.eval_str(holding_scope,
                                                    self.expression)
-
         if found_pyname is not None:
             element = found_pyname.get_object()
             compl_scope = 'attribute'
@@ -340,22 +340,6 @@ class _PythonCodeAssist(object):
             for name, pyname in element.get_attributes().items():
                 if name.startswith(self.starting):
                     result[name] = CompletionProposal(name, compl_scope, pyname)
-
-            # add simple directory completions
-            if isinstance(element, pyobjectsdef.PyPackage):
-                dir_completions = self._add_simple_directory_completions(element.resource.path)
-                for name, proposal in dir_completions.items():
-                    if name not in result:
-                        result[name] = proposal
-        return result
-
-    def _add_simple_directory_completions(self, package_dir):
-        result = {}
-        in_dir_names = [os.path.split(n)[1] for n in glob.glob(os.path.join(package_dir, "*"))]
-        in_dir_names = set(os.path.splitext(n)[0] for n in in_dir_names if "__init__" not in n)
-        for n in in_dir_names:
-            result[n] = rope.contrib.codeassist.CompletionProposal(
-                n, "imported", rope.base.pynames.UnboundName())
         return result
 
     def _undotted_completions(self, scope, result, lineno=None):

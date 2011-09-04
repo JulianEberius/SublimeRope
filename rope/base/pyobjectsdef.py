@@ -148,9 +148,11 @@ class PyModule(pyobjects.PyModule):
                  resource=None, force_errors=False):
         ignore = pycore.project.prefs.get('ignore_syntax_errors', False)
         syntax_errors = force_errors or not ignore
+        self.has_errors = False
         try:
             source, node = self._init_source(pycore, source, resource)
         except exceptions.ModuleSyntaxError:
+            self.has_errors = True
             if syntax_errors:
                 raise
             else:
@@ -528,11 +530,8 @@ class StarImport(object):
 
     def get_names(self):
         result = {}
+        imported = self.imported_module.get_object()
+        for name in imported:
+            if not name.startswith('_'):
+                result[name] = pynames.ImportedName(self.imported_module, name)
         return result
-        ### removed for SublimeRope -> Performance for star imports
-        ### is just to bad (e.g., when working with PyObjC)
-        # imported = self.imported_module.get_object()
-        # for name in imported:
-        #     if not name.startswith('_'):
-        #         result[name] = pynames.ImportedName(self.imported_module, name)
-        # return result
