@@ -138,6 +138,7 @@ class PythonRefactorRename(sublime_plugin.TextCommand):
 
     def run(self, edit, block=False):
         self.view.run_command("save")
+        self.original_loc = self.view.rowcol(self.view.sel()[0].a)
         with ropemate.ropecontext(self.view) as context:
             self.sel = self.view.sel()[0]
             word = self.view.substr(self.view.word(self.sel.b))
@@ -158,9 +159,12 @@ class PythonRefactorRename(sublime_plugin.TextCommand):
     def refactoring_done(self):
         percent_done = self.handle.current_jobset().get_percent_done()
         if percent_done == 100:
-            # force reload... does not seem to work
-            pass
+            self.view.run_command('revert')
 
+            row, col = self.original_loc
+            path = self.view.file_name() + ":%i:%i" % (row + 1, col + 1)
+            self.view.window().open_file(
+                path, sublime.ENCODED_POSITION)
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
