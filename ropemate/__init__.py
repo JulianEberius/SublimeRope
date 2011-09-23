@@ -21,7 +21,6 @@ class ropecontext(object):
         project_dir = self.find_ropeproject(file_path)
         if project_dir:
             self.project = project.Project(project_dir)
-            # no use to have auto import for a single file project
             if not os.path.exists("%s/.ropeproject/globalnames" % project_dir):
                 importer = autoimport.AutoImport(
                     project=self.project, observe=True)
