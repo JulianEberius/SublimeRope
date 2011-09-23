@@ -2,5 +2,17 @@
     {
         "caption": "Rope: New Project",
         "command": "rope_new_project"
+    },
+    {
+        "caption": "Rope: Show Documentation",
+        "command": "python_get_documentation"
+    },
+    {
+        "caption": "Rope: Go to Definition",
+        "command": "goto_python_definition"
+    },
+    {
+        "caption": "Rope Refactoring: Rename",
+        "command": "python_refactor_rename"
     }
 ]
