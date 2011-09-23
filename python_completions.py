@@ -12,6 +12,38 @@ from rope.base.exceptions import ModuleSyntaxError
 from rope.base.taskhandle import TaskHandle
 
 
+class PythonGetDocumentation(sublime_plugin.TextCommand):
+    def run(self, edit):
+        view = self.view
+        row, col = view.rowcol(view.sel()[0].a)
+        offset = view.text_point(row, col)
+        with ropemate.ropecontext(view) as context:
+            try:
+                doc = codeassist.get_doc(
+                    context.project, context.input, offset, context.resource)
+                self.output(doc)
+            except rope.base.exceptions.BadIdentifierError:
+                word = self.view.substr(self.view.word(offset))
+                self.view.set_status(
+                    "rope_documentation_error", "No documentation found for %s" % word)
+
+                def clear_status_callback():
+                    self.view.erase_status("rope_documentation_error")
+                sublime.set_timeout(clear_status_callback, 5000)
+
+    def output(self, string):
+        out_view = self.view.window().get_output_panel("rope_python_documentation")
+        r = sublime.Region(0, out_view.size())
+        e = out_view.begin_edit()
+        out_view.erase(e, r)
+        out_view.insert(e, 0, string)
+        out_view.end_edit(e)
+        out_view.show(0)
+        self.view.window().run_command(
+            "show_panel", {"panel": "output.rope_python_documentation"})
+        self.view.window().focus_view(out_view)
+
+
 class PythonCompletions(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
