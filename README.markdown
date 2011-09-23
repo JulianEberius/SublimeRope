@@ -1,8 +1,7 @@
 **SublimeRope**
 ===========================
 
-Integrates the Python refactoring/completion framework Rope with Sublime Text 2.
-For now, it adds Rope completions to the ST2 completion menu, and adds a command goto_python_definition. It is a port of RopeMate, which I wrote for TextMate, and does not yet include all the features of RopeMate (or Rope for that matter).
+Adds Python completions and some IDE-like functions to Sublime Text 2, through the use of the [Rope](http://rope.sourceforge.net/) library.
 
 I have tested it on the latest dev build. It seems to work equally well on OSX, Linux and Windows, though I mostly test on OSX.
 No guarantees here!
@@ -12,21 +11,34 @@ Copyright (C) 2011 Julian Eberius
 Basic Usage
 -----------
 
-Just unzip / git clone the folder SublimeRope into ST2's Packages folder.
+Just unzip / git clone the folder SublimeRope into ST2's Packages folder. Basic completion should work (for more, see below) and all the commands should be reachable through the Command Palette.
 
-*IMPORTANT*: Since ST2 for the moment has no API to find or mark the project root folder, you have to mark your project's root manually, so that Rope knows which folders to scan for completions / definitions.
+**IMPORTANT**: Since ST2 for the moment has no API to find or mark the project root folder, if you want completions from your whole project and not just one file, you have to mark your project's root, so that Rope knows which folders to scan for completions / definitions.
 
 To do so, call the command "Rope: New Project" from the command palette. This will ask you for the
 project root directory and for the root of the virtualenv. Leave the second one empty if you don't use virtualenv.
 
-Of course, you need to set a key binding, e.g., add this to your user keybindings:
+Available Commands:
+
+* Go to Definition
+* Show Documentation
+* Refactor: Rename
+* And, of course, completions, which hook into Sublime's normal completion system (Ctrl+Space)
+
+Key Bindings
+------------
+
+SublimeRope provides no default keybindings, so you need to set them yourself. The bindings I use for OSX:
 
     { "keys": ["super+f3"], "command": "goto_python_definition"},
+    { "keys": ["super+alt+r"], "command": "python_refactor_rename"},
+    { "keys": ["super+y"], "command": "python_get_documentation"},
+
 
 Getting all completions to work
 -------------------------------
 
-Basically, anthing you want completions for has to be on your python path, which you can extend in <PROJECT_DIR>/.ropeproject/config.py.
+Basically, anthing you want completions for has to be on Rope's python path, which you can extend in <PROJECT_DIR>/.ropeproject/config.py.
 
 If you are using virtualenv for your project, add the path to the virtualenv in .ropeproject/config.py (there should be a commented-out line already in the file in set_prefs). *UPDATE*: the "Rope: New Project" command should do this for you.
 
@@ -41,18 +53,8 @@ A special case are Django projects, which use global imports and not relative on
     prefs.add('python_path', '/Users/ebi/my_django_projects')
 
 
-Refactoring functions
----------------------
-
-SublimeRope now supports the Rope refactoring function "Rename", which renames an identifier (function, class, variable etc.) throughout your project. To use it, you will need to set a keybinding:
-
-    { "keys": ["alt+super+r"], "command": "python_refactor_rename"}
-
-Sometimes the view will not refresh automatically, switch tabs (or do something similar) to refresh in this case. This is still work in progress.
-
-
 Donations
-------
+---------
 
 Here you go:
 
