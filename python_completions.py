@@ -1,13 +1,18 @@
 import sublime_plugin
 import sublime
+import sys
+import os
+import glob
+import re
+
+# always import the bundled rope
+path = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
+sys.path.insert(0, path)
+
+import rope
 import ropemate
 from rope.contrib import codeassist
 from rope.refactor.rename import Rename
-import rope
-import os
-import glob
-import sys
-import re
 from rope.base.exceptions import ModuleSyntaxError
 from rope.base.taskhandle import TaskHandle
 
