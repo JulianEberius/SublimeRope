@@ -56,7 +56,6 @@ class PythonCompletions(sublime_plugin.EventListener):
     def on_query_completions(self, view, prefix, locations):
         if not view.match_selector(locations[0], "source.python"):
             return []
-
         loc = locations[0]
         line = view.substr(view.line(loc))
 
@@ -81,7 +80,6 @@ class PythonCompletions(sublime_plugin.EventListener):
         """tries a simple hack (import+dir()) to help
         completion of imported c-modules"""
         result = []
-        return result
 
         path_added = os.path.split(view.file_name())[0]
         sys.path.insert(0, path_added)
@@ -93,7 +91,7 @@ class PythonCompletions(sublime_plugin.EventListener):
             try:
                 module = __import__(identifier)
             except ImportError, e:
-                print e, "PATH: ", sys.path
+                # print e, "PATH: ", sys.path
                 return []
 
             names = dir(module)
@@ -101,16 +99,6 @@ class PythonCompletions(sublime_plugin.EventListener):
                 if not name.startswith("__"):
                     p = rope.contrib.codeassist.CompletionProposal(
                         name, "imported", rope.base.pynames.UnboundName())
-                    type_name = type(getattr(module, name)).__name__
-                    if type_name.find('function') != -1\
-                            or type_name.find('method') != -1:
-                        p.type = 'function'
-                    elif type_name == 'module':
-                        p.type = 'module'
-                    elif type_name == 'type':
-                        p.type = 'class'
-                    else:
-                        p.type = 'instance'
                     result.append(p)
 
             # if module is a package, check the directory
@@ -258,3 +246,25 @@ class RopeNewProject(sublime_plugin.WindowCommand):
             msg = "Could not create project folder at %s.\nException: %s"
             sublime.error_message(msg % (self.proj_dir, str(e)))
             return
+
+
+class AnalyzeModule(sublime_plugin.TextCommand):
+    def run(self, edit):
+        with ropemate.ropecontext(self.view) as context:
+            if not context.project_dir:
+                # no project dir known
+                return
+            file_name = self.view.file_name()
+            cprefix = os.path.commonprefix(
+                [context.project_dir, file_name])
+            if not cprefix == context.project_dir:
+                # current file not beneath the project dir
+                return
+
+            relpath = os.path.relpath(file_name, context.project_dir)
+            module_name = relpath.replace(os.sep, ".")\
+                .replace(".py", "").replace(".__init__", "")
+
+            mod = context.project.pycore.find_module(module_name)
+            print mod, mod.path
+            context.project.pycore.analyze_module(mod)
