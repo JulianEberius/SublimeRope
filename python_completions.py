@@ -56,23 +56,23 @@ class PythonCompletions(sublime_plugin.EventListener):
     def on_query_completions(self, view, prefix, locations):
         if not view.match_selector(locations[0], "source.python"):
             return []
-        loc = locations[0]
-        line = view.substr(view.line(loc))
 
         with ropemate.ropecontext(view) as context:
+            loc = locations[0]
             try:
                 raw_proposals = codeassist.code_assist(
                     context.project, context.input, loc, context.resource)
             except ModuleSyntaxError:
                 raw_proposals = []
-            if len(raw_proposals) > 0:
-                sorted_proposals = codeassist.sorted_proposals(raw_proposals)
-            else:
+            if len(raw_proposals) <= 0:
                 # try the simple hackish completion
-                identifier = line[:view.rowcol(loc)[1] - 1].strip()
+                line = view.substr(view.line(loc))
+                identifier = line[:view.rowcol(loc)[1]].strip(' .')
+                if ' ' in identifier:
+                    identifier = identifier.split(' ')[-1]
                 raw_proposals = self.simple_module_completion(view, identifier)
-                sorted_proposals = sorted(raw_proposals, key=lambda x: x.name)
 
+        sorted_proposals = codeassist.sorted_proposals(raw_proposals)
         proposals = filter(lambda p: p.name != "self=", sorted_proposals)
         return [(str(p), p.name) for p in proposals]
 
@@ -90,6 +90,8 @@ class PythonCompletions(sublime_plugin.EventListener):
             module = None
             try:
                 module = __import__(identifier)
+                if '.' in identifier:
+                    module = sys.modules[identifier]
             except ImportError, e:
                 # print e, "PATH: ", sys.path
                 return []
