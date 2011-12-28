@@ -1,6 +1,7 @@
 import os
 import sys
 import sublime
+import tempfile
 
 from rope.base import project, libutils
 from ropemate.path import update_python_path
@@ -14,10 +15,18 @@ class ropecontext(object):
         self.view = view
         self.project = None
         self.resource = None
+        self.tmpfile = None
         self.input = ""
 
     def __enter__(self):
         file_path = self.view.file_name()
+        if file_path is None:
+            # We are dealing with a new buffer.
+            self.tmpfile = tempfile.NamedTemporaryFile(delete = False)
+            text = self.view.substr(sublime.Region(0, self.view.size()))#.encode('utf-8')
+            self.tmpfile.write(text)
+            self.tmpfile.close()
+            file_path = self.tmpfile.name
         project_dir = self.find_ropeproject(file_path)
         if project_dir:
             self.project = project.Project(project_dir)
@@ -27,7 +36,6 @@ class ropecontext(object):
                 importer.generate_cache()
             if os.path.exists("%s/__init__.py" % project_dir):
                 sys.path.append(project_dir)
-
         else:
             # create a single-file project(ignoring other files in the folder)
             folder = os.path.dirname(file_path)
@@ -47,6 +55,8 @@ class ropecontext(object):
     def __exit__(self, type, value, traceback):
         if type is None:
             self.project.close()
+        if self.tmpfile is not None:
+            os.remove(self.tmpfile.name)
 
     def find_ropeproject(self, file_dir):
         def traverse_upward(look_for, start_at="."):
