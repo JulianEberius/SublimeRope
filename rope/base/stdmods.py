@@ -5,8 +5,14 @@ from rope.base import utils
 
 
 def _stdlib_path():
-    import distutils.sysconfig
-    return distutils.sysconfig.get_python_lib(standard_lib=True)
+    try:
+        import distutils.sysconfig
+        return distutils.sysconfig.get_python_lib(standard_lib=True)
+    except ImportError:
+        # original code from older versions of rope is used when
+        # distutil is not installed
+        import inspect
+        return os.path.dirname(inspect.getsourcefile(inspect))
 
 @utils.cached(1)
 def standard_modules():
