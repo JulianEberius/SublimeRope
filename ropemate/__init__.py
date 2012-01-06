@@ -1,10 +1,10 @@
 import os
 import sys
+import site
 import sublime
 import tempfile
 
 from rope.base import project, libutils
-from ropemate.path import update_python_path
 from rope.contrib import autoimport
 
 
@@ -21,12 +21,8 @@ class ropecontext(object):
     def __enter__(self):
         file_path = self.view.file_name()
         if file_path is None:
-            # We are dealing with a new buffer.
-            self.tmpfile = tempfile.NamedTemporaryFile(delete = False)
-            text = self.view.substr(sublime.Region(0, self.view.size()))#.encode('utf-8')
-            self.tmpfile.write(text)
-            self.tmpfile.close()
-            file_path = self.tmpfile.name
+            # unsaved buffer
+            file_path = self.create_temp_file()
         project_dir = self.find_ropeproject(file_path)
         if project_dir:
             self.project = project.Project(project_dir)
@@ -58,6 +54,13 @@ class ropecontext(object):
         if self.tmpfile is not None:
             os.remove(self.tmpfile.name)
 
+    def create_temp_file(self):
+        self.tmpfile = tempfile.NamedTemporaryFile(delete=False)
+        text = self.view.substr(sublime.Region(0, self.view.size()))
+        self.tmpfile.write(text)
+        self.tmpfile.close()
+        return self.tmpfile.name
+
     def find_ropeproject(self, file_dir):
         def traverse_upward(look_for, start_at="."):
             p = os.path.abspath(start_at)
@@ -72,3 +75,19 @@ class ropecontext(object):
 
         return traverse_upward(
             ".ropeproject", start_at=os.path.split(file_dir)[0])
+
+
+def update_python_path(paths):
+    "update sys.path and make sure the new items come first"
+    old_sys_path_items = list(sys.path)
+
+    for path in paths:
+        # see if it is a site dir
+        if path.find('site-packages') != -1:
+            site.addsitedir(path)
+        else:
+            sys.path.insert(0, path)
+
+    # Reorder sys.path so new directories at the front.
+    new_sys_path_items = set(sys.path) - set(old_sys_path_items)
+    sys.path = list(new_sys_path_items) + old_sys_path_items
