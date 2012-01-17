@@ -13,6 +13,7 @@ import rope
 import ropemate
 from rope.contrib import codeassist
 from rope.refactor.rename import Rename
+from rope.refactor.extract import ExtractMethod
 from rope.base.exceptions import ModuleSyntaxError
 from rope.base.taskhandle import TaskHandle
 
@@ -150,6 +151,40 @@ class PythonRefactorRename(sublime_plugin.TextCommand):
                 return
             changes = self.rename.get_changes(new_name, in_hierarchy=True)
             self.handle = TaskHandle(name="rename_handle")
+            self.handle.add_observer(self.refactoring_done)
+            context.project.do(changes, task_handle=self.handle)
+
+    def refactoring_done(self):
+        percent_done = self.handle.current_jobset().get_percent_done()
+        if percent_done == 100:
+            self.view.run_command('revert')
+
+            row, col = self.original_loc
+            path = self.view.file_name() + ":%i:%i" % (row + 1, col + 1)
+            self.view.window().open_file(
+                path, sublime.ENCODED_POSITION)
+
+
+class PythonRefactorExtractMethod(sublime_plugin.TextCommand):
+
+    def run(self, edit, block=False):
+        self.view.run_command("save")
+        self.original_loc = self.view.rowcol(self.view.sel()[0].a)
+        with ropemate.ropecontext(self.view) as context:
+            self.sel = self.view.sel()[0]
+            # word = self.view.substr(self.view.word(self.sel.b))
+
+            self.extract = ExtractMethod(context.project, context.resource, self.sel.a, self.sel.b)
+            self.view.window().show_input_panel(
+                "New method name", "", self.new_name_entered, None, None)
+
+    def new_name_entered(self, new_name):
+        with ropemate.ropecontext(self.view) as context:
+            if new_name is None:
+                return
+            changes = self.extract.get_changes(new_name)
+            print changes
+            self.handle = TaskHandle(name="extract_handle")
             self.handle.add_observer(self.refactoring_done)
             context.project.do(changes, task_handle=self.handle)
 

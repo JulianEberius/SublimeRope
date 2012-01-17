@@ -14,5 +14,9 @@
     {
         "caption": "Rope Refactoring: Rename",
         "command": "python_refactor_rename"
+    },
+    {
+        "caption": "Rope Refactoring: Extract Method",
+        "command": "python_refactor_extract_method"
     }
 ]
