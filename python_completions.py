@@ -132,7 +132,11 @@ class PythonCompletions(sublime_plugin.EventListener):
         return None
 
 
-class PythonRefactorRename(sublime_plugin.TextCommand):
+class AbstractPythonRefactoring(object):
+
+    def __init__(self, message):
+        # super(AbstractPythonRefactoring, self).__init__(*args, **kwargs)
+        self.message = message
 
     def run(self, edit, block=False):
         self.view.run_command("save")
@@ -141,16 +145,17 @@ class PythonRefactorRename(sublime_plugin.TextCommand):
             self.sel = self.view.sel()[0]
             word = self.view.substr(self.view.word(self.sel.b))
 
-            self.rename = Rename(context.project, context.resource, self.sel.b)
+            self.refactoring = self.create_refactoring_operation(
+                context.project, context.resource, self.sel.a, self.sel.b)
             self.view.window().show_input_panel(
-                "New name", word, self.new_name_entered, None, None)
+                self.message, word, self.input_callback, None, None)
 
-    def new_name_entered(self, new_name):
+    def input_callback(self, input_str):
         with ropemate.ropecontext(self.view) as context:
-            if new_name is None or new_name == self.rename.old_name:
+            if input_str is None:
                 return
-            changes = self.rename.get_changes(new_name, in_hierarchy=True)
-            self.handle = TaskHandle(name="rename_handle")
+            changes = self.get_changes(input_str)
+            self.handle = TaskHandle(name="refactoring_handle")
             self.handle.add_observer(self.refactoring_done)
             context.project.do(changes, task_handle=self.handle)
 
@@ -164,39 +169,42 @@ class PythonRefactorRename(sublime_plugin.TextCommand):
             self.view.window().open_file(
                 path, sublime.ENCODED_POSITION)
 
+    def get_changes(self, input_str):
+        raise NotImplemented
 
-class PythonRefactorExtractMethod(sublime_plugin.TextCommand):
+    def create_refactoring_operation(self, project, resource, start, end):
+        raise NotImplemented
 
-    def run(self, edit, block=False):
-        self.view.run_command("save")
-        self.original_loc = self.view.rowcol(self.view.sel()[0].a)
-        with ropemate.ropecontext(self.view) as context:
-            self.sel = self.view.sel()[0]
-            # word = self.view.substr(self.view.word(self.sel.b))
 
-            self.extract = ExtractMethod(context.project, context.resource, self.sel.a, self.sel.b)
-            self.view.window().show_input_panel(
-                "New method name", "", self.new_name_entered, None, None)
+class PythonRefactorRename(AbstractPythonRefactoring, sublime_plugin.TextCommand):
 
-    def new_name_entered(self, new_name):
-        with ropemate.ropecontext(self.view) as context:
-            if new_name is None:
-                return
-            changes = self.extract.get_changes(new_name)
-            print changes
-            self.handle = TaskHandle(name="extract_handle")
-            self.handle.add_observer(self.refactoring_done)
-            context.project.do(changes, task_handle=self.handle)
+    def __init__(self, *args, **kwargs):
+        AbstractPythonRefactoring.__init__(self, message="New name")
+        sublime_plugin.TextCommand.__init__(self, *args, **kwargs)
 
-    def refactoring_done(self):
-        percent_done = self.handle.current_jobset().get_percent_done()
-        if percent_done == 100:
-            self.view.run_command('revert')
+    def input_callback(self, input_str):
+        if input_str == self.refactoring.old_name:
+            return
+        return super(PythonRefactorRename, self).input_callback(input_str)
 
-            row, col = self.original_loc
-            path = self.view.file_name() + ":%i:%i" % (row + 1, col + 1)
-            self.view.window().open_file(
-                path, sublime.ENCODED_POSITION)
+    def get_changes(self, input_str):
+        return self.refactoring.get_changes(input_str, in_hierarchy=True)
+
+    def create_refactoring_operation(self, project, resource, start, end):
+        return Rename(project, resource, start)
+
+
+class PythonRefactorExtractMethod(AbstractPythonRefactoring, sublime_plugin.TextCommand):
+
+    def __init__(self, *args, **kwargs):
+        AbstractPythonRefactoring.__init__(self, message="New method name")
+        sublime_plugin.TextCommand.__init__(self, *args, **kwargs)
+
+    def get_changes(self, input_str):
+        return self.refactoring.get_changes(input_str)
+
+    def create_refactoring_operation(self, project, resource, start, end):
+        return ExtractMethod(project, resource, start, end)
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
