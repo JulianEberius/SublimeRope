@@ -23,16 +23,34 @@ Available Commands:
 * Go to Definition
 * Show Documentation
 * Refactor: Rename
+* Refactor: Extract Method
 * And, of course, completions, which hook into Sublime's normal completion system (Ctrl+Space)
 
 Key Bindings
 ------------
 
-SublimeRope provides no default keybindings, so you need to set them yourself. The bindings I use for OSX:
+SublimeRope provides no default keybindings, so you need to set them yourself. The bindings I use:
 
-    { "keys": ["super+f3"], "command": "goto_python_definition"},
-    { "keys": ["super+alt+r"], "command": "python_refactor_rename"},
-    { "keys": ["super+y"], "command": "python_get_documentation"},
+    { "keys": ["ctrl+r", "ctrl+d"], "command": "goto_python_definition", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python" }
+        ]
+    },
+    { "keys": ["ctrl+r", "ctrl+h"], "command": "python_get_documentation", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python" }
+        ]
+    },
+    { "keys": ["ctrl+r", "ctrl+r"], "command": "python_refactor_rename", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python" }
+        ]
+    },
+    { "keys": ["ctrl+r", "ctrl+e"], "command": "python_refactor_extract_method", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python" }
+        ]
+    },
 
 
 Getting all completions to work

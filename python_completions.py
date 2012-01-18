@@ -135,7 +135,6 @@ class PythonCompletions(sublime_plugin.EventListener):
 class AbstractPythonRefactoring(object):
 
     def __init__(self, message):
-        # super(AbstractPythonRefactoring, self).__init__(*args, **kwargs)
         self.message = message
 
     def run(self, edit, block=False):
@@ -143,12 +142,11 @@ class AbstractPythonRefactoring(object):
         self.original_loc = self.view.rowcol(self.view.sel()[0].a)
         with ropemate.ropecontext(self.view) as context:
             self.sel = self.view.sel()[0]
-            word = self.view.substr(self.view.word(self.sel.b))
 
             self.refactoring = self.create_refactoring_operation(
                 context.project, context.resource, self.sel.a, self.sel.b)
             self.view.window().show_input_panel(
-                self.message, word, self.input_callback, None, None)
+                self.message, self.default_input(), self.input_callback, None, None)
 
     def input_callback(self, input_str):
         with ropemate.ropecontext(self.view) as context:
@@ -169,6 +167,9 @@ class AbstractPythonRefactoring(object):
             self.view.window().open_file(
                 path, sublime.ENCODED_POSITION)
 
+    def default_input(self):
+        raise NotImplemented
+
     def get_changes(self, input_str):
         raise NotImplemented
 
@@ -185,7 +186,10 @@ class PythonRefactorRename(AbstractPythonRefactoring, sublime_plugin.TextCommand
     def input_callback(self, input_str):
         if input_str == self.refactoring.old_name:
             return
-        return super(PythonRefactorRename, self).input_callback(input_str)
+        return AbstractPythonRefactoring.input_callback(self, input_str)
+
+    def default_input(self):
+        return self.view.substr(self.view.word(self.sel.b))
 
     def get_changes(self, input_str):
         return self.refactoring.get_changes(input_str, in_hierarchy=True)
@@ -199,6 +203,9 @@ class PythonRefactorExtractMethod(AbstractPythonRefactoring, sublime_plugin.Text
     def __init__(self, *args, **kwargs):
         AbstractPythonRefactoring.__init__(self, message="New method name")
         sublime_plugin.TextCommand.__init__(self, *args, **kwargs)
+
+    def default_input(self):
+        return "new_method"
 
     def get_changes(self, input_str):
         return self.refactoring.get_changes(input_str)
