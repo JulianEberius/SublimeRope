@@ -8,7 +8,7 @@ from rope.base import project, libutils
 from rope.contrib import autoimport
 
 
-class ropecontext(object):
+class RopeContext(object):
     """a context manager to have a rope project context"""
 
     def __init__(self, view):
