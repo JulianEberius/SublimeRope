@@ -18,7 +18,99 @@ from rope.base.exceptions import ModuleSyntaxError
 from rope.base.taskhandle import TaskHandle
 
 
+class PythonEventListener(sublime_plugin.EventListener):
+    '''Updates Rope's database in response to events (e.g. post_save)'''
+    def on_post_save(self, view):
+        with ropemate.ropecontext(view) as context:
+            context.importer.generate_cache(
+                resources=[context.resource])
+
+
+class PythonCompletions(sublime_plugin.EventListener):
+    ''''Provides rope completions for the ST2 completion system.'''
+    def on_query_completions(self, view, prefix, locations):
+        if not view.match_selector(locations[0], "source.python"):
+            return []
+
+        with ropemate.ropecontext(view) as context:
+            loc = locations[0]
+            try:
+                raw_proposals = codeassist.code_assist(
+                    context.project, context.input, loc, context.resource)
+            except ModuleSyntaxError:
+                raw_proposals = []
+            if len(raw_proposals) <= 0:
+                # try the simple hackish completion
+                line = view.substr(view.line(loc))
+                identifier = line[:view.rowcol(loc)[1]].strip(' .')
+                if ' ' in identifier:
+                    identifier = identifier.split(' ')[-1]
+                raw_proposals = self.simple_module_completion(view, identifier)
+
+        sorted_proposals = codeassist.sorted_proposals(raw_proposals)
+        proposals = filter(lambda p: p.name != "self=", sorted_proposals)
+        return [(str(p), p.name) for p in proposals]
+
+    def simple_module_completion(self, view, identifier):
+        """tries a simple hack (import+dir()) to help
+        completion of imported c-modules"""
+        result = []
+
+        path_added = os.path.split(view.file_name())[0]
+        sys.path.insert(0, path_added)
+
+        try:
+            if not identifier:
+                return []
+            module = None
+            try:
+                module = __import__(identifier)
+                if '.' in identifier:
+                    module = sys.modules[identifier]
+            except ImportError, e:
+                # print e, "PATH: ", sys.path
+                return []
+
+            names = dir(module)
+            for name in names:
+                if not name.startswith("__"):
+                    p = rope.contrib.codeassist.CompletionProposal(
+                        name, "imported", rope.base.pynames.UnboundName())
+                    result.append(p)
+
+            # if module is a package, check the directory
+            directory_completions = self.add_module_directory_completions(
+                module)
+            if directory_completions:
+                result.extend(directory_completions)
+        except Exception, e:
+            print e
+            return []
+
+        finally:
+            sys.path.remove(path_added)
+
+        return result
+
+    def add_module_directory_completions(self, module):
+        '''Another simple hack that helps with some packages: add all files in
+        a package as completion options'''
+        if hasattr(module, "__path__"):
+            result = []
+            in_dir_names = [os.path.split(n)[1]
+                for n in glob.glob(os.path.join(module.__path__[0], "*"))]
+            in_dir_names = set(os.path.splitext(n)[0]
+                for n in in_dir_names if "__init__" not in n)
+            for n in in_dir_names:
+                result.append(rope.contrib.codeassist.CompletionProposal(
+                    n, None, rope.base.pynames.UnboundName()))
+            return result
+        return None
+
+
 class PythonGetDocumentation(sublime_plugin.TextCommand):
+    '''Retrieves the docstring for the identifier under the cursor and
+    displays it in a new panel.'''
     def run(self, edit):
         view = self.view
         row, col = view.rowcol(view.sel()[0].a)
@@ -88,96 +180,10 @@ class PythonJumpToGlobal(sublime_plugin.TextCommand):
             self.view.window().open_file("%s:%s" % (path, line), sublime.ENCODED_POSITION)
 
 
-class PythonEventListener(sublime_plugin.EventListener):
-
-    def on_post_save(self, view):
-        with ropemate.ropecontext(view) as context:
-            context.importer.generate_cache(
-                resources=[context.resource])
-
-
-class PythonCompletions(sublime_plugin.EventListener):
-
-    def on_query_completions(self, view, prefix, locations):
-        if not view.match_selector(locations[0], "source.python"):
-            return []
-
-        with ropemate.ropecontext(view) as context:
-            loc = locations[0]
-            try:
-                raw_proposals = codeassist.code_assist(
-                    context.project, context.input, loc, context.resource)
-            except ModuleSyntaxError:
-                raw_proposals = []
-            if len(raw_proposals) <= 0:
-                # try the simple hackish completion
-                line = view.substr(view.line(loc))
-                identifier = line[:view.rowcol(loc)[1]].strip(' .')
-                if ' ' in identifier:
-                    identifier = identifier.split(' ')[-1]
-                raw_proposals = self.simple_module_completion(view, identifier)
-
-        sorted_proposals = codeassist.sorted_proposals(raw_proposals)
-        proposals = filter(lambda p: p.name != "self=", sorted_proposals)
-        return [(str(p), p.name) for p in proposals]
-
-    def simple_module_completion(self, view, identifier):
-        """tries a simple hack (import+dir()) to help
-        completion of imported c-modules"""
-        result = []
-
-        path_added = os.path.split(view.file_name())[0]
-        sys.path.insert(0, path_added)
-
-        try:
-            if not identifier:
-                return []
-            module = None
-            try:
-                module = __import__(identifier)
-                if '.' in identifier:
-                    module = sys.modules[identifier]
-            except ImportError, e:
-                # print e, "PATH: ", sys.path
-                return []
-
-            names = dir(module)
-            for name in names:
-                if not name.startswith("__"):
-                    p = rope.contrib.codeassist.CompletionProposal(
-                        name, "imported", rope.base.pynames.UnboundName())
-                    result.append(p)
-
-            # if module is a package, check the directory
-            directory_completions = self.add_module_directory_completions(
-                module)
-            if directory_completions:
-                result.extend(directory_completions)
-        except Exception, e:
-            print e
-            return []
-
-        finally:
-            sys.path.remove(path_added)
-
-        return result
-
-    def add_module_directory_completions(self, module):
-        if hasattr(module, "__path__"):
-            result = []
-            in_dir_names = [os.path.split(n)[1]
-                for n in glob.glob(os.path.join(module.__path__[0], "*"))]
-            in_dir_names = set(os.path.splitext(n)[0]
-                for n in in_dir_names if "__init__" not in n)
-            for n in in_dir_names:
-                result.append(rope.contrib.codeassist.CompletionProposal(
-                    n, None, rope.base.pynames.UnboundName()))
-            return result
-        return None
-
-
 class AbstractPythonRefactoring(object):
-
+    '''Some common functionality for the rope refactorings.
+    Implement __init__, default_input, get_changes and create_refactoring_operation
+    in the subclasses to add a new refactoring.'''
     def __init__(self, message):
         self.message = message
 
@@ -222,7 +228,7 @@ class AbstractPythonRefactoring(object):
 
 
 class PythonRefactorRename(AbstractPythonRefactoring, sublime_plugin.TextCommand):
-
+    '''Renames the identifier under the cursor throughout the project'''
     def __init__(self, *args, **kwargs):
         AbstractPythonRefactoring.__init__(self, message="New name")
         sublime_plugin.TextCommand.__init__(self, *args, **kwargs)
@@ -243,7 +249,8 @@ class PythonRefactorRename(AbstractPythonRefactoring, sublime_plugin.TextCommand
 
 
 class PythonRefactorExtractMethod(AbstractPythonRefactoring, sublime_plugin.TextCommand):
-
+    '''Creates a new function or method (depending on the context) from the selected
+    lines'''
     def __init__(self, *args, **kwargs):
         AbstractPythonRefactoring.__init__(self, message="New method name")
         sublime_plugin.TextCommand.__init__(self, *args, **kwargs)
@@ -259,7 +266,7 @@ class PythonRefactorExtractMethod(AbstractPythonRefactoring, sublime_plugin.Text
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
-
+    '''Shows the definition of the identifier under the cursor, project-wide.'''
     def run(self, edit, block=False):
         with ropemate.ropecontext(self.view) as context:
             offset = self.view.sel()[0].a
@@ -283,6 +290,9 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
 
 
 class PythonRegenerateCache(sublime_plugin.TextCommand):
+    '''Regenerates the cache used for jump-to-globals and auto-imports.
+    It is regenerated partially on every save, but sometimes a full regenerate
+    might be neceessary.'''
     def run(self, edit):
         with ropemate.ropecontext(self.view) as context:
             context.importer.clear_cache()
@@ -290,6 +300,8 @@ class PythonRegenerateCache(sublime_plugin.TextCommand):
 
 
 class RopeNewProject(sublime_plugin.WindowCommand):
+    '''Asks the user for project- and virtualenv directory and creates a configured
+    rope project with these values'''
     def run(self):
         folders = self.window.folders()
         suggested_folder = folders[0] if folders else os.path.expanduser("~")
