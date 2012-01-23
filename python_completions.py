@@ -52,6 +52,50 @@ class PythonGetDocumentation(sublime_plugin.TextCommand):
         self.view.window().focus_view(out_view)
 
 
+class PythonJumpToGlobal(sublime_plugin.TextCommand):
+    """Allows the user to select from a list of all known globals
+    in a quick panel to jump there."""
+    def run(self, edit):
+        with ropemate.ropecontext(self.view) as context:
+            self.names = list(context.importer.get_all_names())
+            self.view.window().show_quick_panel(
+                self.names, self.on_select_global, sublime.MONOSPACE_FONT)
+
+    def on_select_global(self, choice):
+        def loc_to_str(loc):
+            resource, line = loc
+            return "%s:%s" % (resource.path, line)
+
+        if choice is not -1:
+            selected_global = self.names[choice]
+            with ropemate.ropecontext(self.view) as context:
+                self.locs = context.importer.get_name_locations(selected_global)
+                self.locs = map(loc_to_str, self.locs)
+
+                if not self.locs:
+                    return
+                if len(self.locs) == 1:
+                    self.on_select_location(0)
+                else:
+                    self.view.window().show_quick_panel(
+                        self.locs, self.on_select_location, sublime.MONOSPACE_FONT)
+
+    def on_select_location(self, choice):
+        loc = self.locs[choice]
+        with ropemate.ropecontext(self.view) as context:
+            path, line = loc.split(":")
+            path = context.project._get_resource_path(path)
+            self.view.window().open_file("%s:%s" % (path, line), sublime.ENCODED_POSITION)
+
+
+class PythonEventListener(sublime_plugin.EventListener):
+
+    def on_post_save(self, view):
+        with ropemate.ropecontext(view) as context:
+            context.importer.generate_cache(
+                resources=[context.resource])
+
+
 class PythonCompletions(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
@@ -238,6 +282,13 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                 window.open_file(path, sublime.ENCODED_POSITION)
 
 
+class PythonRegenerateCache(sublime_plugin.TextCommand):
+    def run(self, edit):
+        with ropemate.ropecontext(self.view) as context:
+            context.importer.clear_cache()
+            context.importer.generate_cache()
+
+
 class RopeNewProject(sublime_plugin.WindowCommand):
     def run(self):
         folders = self.window.folders()
@@ -298,25 +349,3 @@ class RopeNewProject(sublime_plugin.WindowCommand):
             msg = "Could not create project folder at %s.\nException: %s"
             sublime.error_message(msg % (self.proj_dir, str(e)))
             return
-
-
-class AnalyzeModule(sublime_plugin.TextCommand):
-    def run(self, edit):
-        with ropemate.ropecontext(self.view) as context:
-            if not context.project_dir:
-                # no project dir known
-                return
-            file_name = self.view.file_name()
-            cprefix = os.path.commonprefix(
-                [context.project_dir, file_name])
-            if not cprefix == context.project_dir:
-                # current file not beneath the project dir
-                return
-
-            relpath = os.path.relpath(file_name, context.project_dir)
-            module_name = relpath.replace(os.sep, ".")\
-                .replace(".py", "").replace(".__init__", "")
-
-            mod = context.project.pycore.find_module(module_name)
-            print mod, mod.path
-            context.project.pycore.analyze_module(mod)

@@ -22,6 +22,7 @@ Available Commands:
 
 * Go to Definition
 * Show Documentation
+* Jump to Global
 * Refactor: Rename
 * Refactor: Extract Method
 * And, of course, completions, which hook into Sublime's normal completion system (Ctrl+Space)
@@ -47,6 +48,16 @@ SublimeRope provides no default keybindings, so you need to set them yourself. T
         ]
     },
     { "keys": ["ctrl+r", "ctrl+e"], "command": "python_refactor_extract_method", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python" }
+        ]
+    },
+    { "keys": ["ctrl+r", "ctrl+c"], "command": "python_regenerate_cache", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python" }
+        ]
+    },
+    { "keys": ["ctrl+r", "ctrl+j"], "command": "python_jump_to_global", "context":
         [
             { "key": "selector", "operator": "equal", "operand": "source.python" }
         ]

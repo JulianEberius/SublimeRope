@@ -26,10 +26,10 @@ class ropecontext(object):
         project_dir = self.find_ropeproject(file_path)
         if project_dir:
             self.project = project.Project(project_dir)
+            self.importer = autoimport.AutoImport(
+                project=self.project, observe=True)
             if not os.path.exists("%s/.ropeproject/globalnames" % project_dir):
-                importer = autoimport.AutoImport(
-                    project=self.project, observe=True)
-                importer.generate_cache()
+                self.importer.generate_cache()
             if os.path.exists("%s/__init__.py" % project_dir):
                 sys.path.append(project_dir)
         else:
@@ -41,6 +41,8 @@ class ropecontext(object):
             self.project = project.Project(
                 ropefolder=None, projectroot=folder,
                 ignored_resources=ignored_res)
+            self.importer = autoimport.AutoImport(
+                project=self.project, observe=True)
 
         self.resource = libutils.path_to_resource(self.project, file_path)
         update_python_path(self.project.prefs.get('python_path', []))
