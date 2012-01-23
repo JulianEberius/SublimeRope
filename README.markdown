@@ -52,12 +52,17 @@ SublimeRope provides no default keybindings, so you need to set them yourself. T
             { "key": "selector", "operator": "equal", "operand": "source.python" }
         ]
     },
-    { "keys": ["ctrl+r", "ctrl+c"], "command": "python_regenerate_cache", "context":
+    { "keys": ["ctrl+r", "ctrl+j"], "command": "python_jump_to_global", "context":
         [
             { "key": "selector", "operator": "equal", "operand": "source.python" }
         ]
     },
-    { "keys": ["ctrl+r", "ctrl+j"], "command": "python_jump_to_global", "context":
+    { "keys": ["ctrl+r", "ctrl+i"], "command": "python_auto_import", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python" }
+        ]
+    },
+    { "keys": ["ctrl+r", "ctrl+c"], "command": "python_regenerate_cache", "context":
         [
             { "key": "selector", "operator": "equal", "operand": "source.python" }
         ]

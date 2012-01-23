@@ -180,6 +180,45 @@ class PythonJumpToGlobal(sublime_plugin.TextCommand):
             self.view.window().open_file("%s:%s" % (path, line), sublime.ENCODED_POSITION)
 
 
+class PythonAutoImport(sublime_plugin.TextCommand):
+    """Provides a list of project globals starting with the
+    word under the cursor"""
+    def run(self, edit):
+        view = self.view
+        row, col = view.rowcol(view.sel()[0].a)
+        self.offset = view.text_point(row, col)
+        with ropemate.ropecontext(view) as context:
+            word = self.view.substr(self.view.word(self.offset))
+            self.candidates = list(context.importer.import_assist(word))
+            self.view.window().show_quick_panel(
+                map(lambda c: [c[0], c[1]], self.candidates),
+                self.on_select_global, sublime.MONOSPACE_FONT)
+
+    def on_select_global(self, choice):
+        if choice is not -1:
+            name, module = self.candidates[choice]
+            with ropemate.ropecontext(self.view) as context:
+                # check whether adding an import is necessary, and where
+                all_lines = self.view.lines(sublime.Region(0, self.view.size()))
+                line_no = context.importer.find_insertion_line(context.input)
+                insert_import_str = "from %s import %s\n" % (module, name)
+                existing_imports_str = self.view.substr(
+                    sublime.Region(all_lines[0].a, all_lines[line_no - 1].b))
+                do_insert_import = insert_import_str not in existing_imports_str
+                insert_import_point = all_lines[line_no].a
+
+                # the word prefix that is replaced
+                original_word = self.view.word(self.offset)
+
+                # replace the prefix, add the import if necessary
+                e = self.view.begin_edit()
+                self.view.replace(e, original_word, name)
+                if do_insert_import:
+                    self.view.insert(
+                        e, insert_import_point, insert_import_str)
+                self.view.end_edit(e)
+
+
 class AbstractPythonRefactoring(object):
     '''Some common functionality for the rope refactorings.
     Implement __init__, default_input, get_changes and create_refactoring_operation
