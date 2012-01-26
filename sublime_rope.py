@@ -126,7 +126,7 @@ class PythonGetDocumentation(sublime_plugin.TextCommand):
             try:
                 doc = codeassist.get_doc(
                     context.project, context.input, offset, context.resource,
-                    maxfixes=3, later_locals=False)
+                    maxfixes=3)
                 if not doc:
                     raise rope.base.exceptions.BadIdentifierError
                 self.output(doc)
