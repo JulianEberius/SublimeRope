@@ -12,6 +12,14 @@
         "command": "goto_python_definition"
     },
     {
+        "caption": "Rope: Import Assist",
+        "command": "python_auto_import"
+    },
+    {
+        "caption": "Rope: Jump To Global",
+        "command": "python_jump_to_global"
+    },
+    {
         "caption": "Rope Refactoring: Rename",
         "command": "python_refactor_rename"
     },

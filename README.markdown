@@ -11,26 +11,26 @@ Copyright (C) 2011 Julian Eberius
 Basic Usage
 -----------
 
-Just unzip / git clone the folder SublimeRope into ST2's Packages folder. Basic completion should work (for more, see below) and all the commands should be reachable through the Command Palette.
+Just unzip / git clone the folder SublimeRope into ST2's Packages folder. Basic completion should work (for more, see below) and all the commands should be reachable through the Command Palette. You can also use [package_control](http://wbond.net/sublime_packages/package_control) to install this plugin.
 
-**IMPORTANT**: Since ST2 for the moment has no API to find or mark the project root folder, if you want completions from your whole project and not just one file, you have to mark your project's root, so that Rope knows which folders to scan for completions / definitions.
-
+**IMPORTANT**: For Rope to find all the definitions and offer you the best completion proposals, you need to configure a Rope project.
 To do so, call the command "Rope: New Project" from the command palette. This will ask you for the
 project root directory and for the root of the virtualenv. Leave the second one empty if you don't use virtualenv.
 
 Available Commands:
 
+* Completions, which hook into Sublime's normal completion system (Ctrl+Space and as-you-type)
 * Go to Definition
 * Show Documentation
-* Jump to Global
-* Refactor: Rename
-* Refactor: Extract Method
-* And, of course, completions, which hook into Sublime's normal completion system (Ctrl+Space)
+* Refactor->Rename
+* Refactor->Extract Method
+* Jump to Global: Shows a list of project globals in a quickview and allows to jump to them.
+* Import assist: Looks for possible imports from the project starting with the prefix under the cursor. Will automatically insert the "from X import Z" statement.
 
 Key Bindings
 ------------
 
-SublimeRope provides no default keybindings, so you need to set them yourself. The bindings I use:
+SublimeRope provides no default keybindings at the moment, so you need to set them yourself. The bindings I use:
 
     { "keys": ["ctrl+r", "ctrl+d"], "command": "goto_python_definition", "context":
         [
