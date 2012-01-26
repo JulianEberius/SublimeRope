@@ -26,7 +26,8 @@ class PythonGetDocumentation(sublime_plugin.TextCommand):
         with ropemate.ropecontext(view) as context:
             try:
                 doc = codeassist.get_doc(
-                    context.project, context.input, offset, context.resource)
+                    context.project, context.input, offset, context.resource,
+                    maxfixes=3, later_locals=False)
                 if not doc:
                     raise rope.base.exceptions.BadIdentifierError
                 self.output(doc)
@@ -52,6 +53,12 @@ class PythonGetDocumentation(sublime_plugin.TextCommand):
         self.view.window().focus_view(out_view)
 
 
+def proposal_string(proposal):
+    result = str(proposal).split(' ')
+    result = '%s\t%s' % (result[0], ' '.join(result[1:]))
+    return result
+
+
 class PythonCompletions(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
@@ -73,9 +80,9 @@ class PythonCompletions(sublime_plugin.EventListener):
                     identifier = identifier.split(' ')[-1]
                 raw_proposals = self.simple_module_completion(view, identifier)
 
-        sorted_proposals = codeassist.sorted_proposals(raw_proposals)
-        proposals = filter(lambda p: p.name != "self=", sorted_proposals)
-        return [(str(p), p.name) for p in proposals]
+        proposals = codeassist.sorted_proposals(raw_proposals)
+        proposals = [(proposal_string(p), p.name) for p in proposals if p.name != 'self=']
+        return (proposals, sublime.INHIBIT_EXPLICIT_COMPLETIONS | sublime.INHIBIT_WORD_COMPLETIONS)
 
     def simple_module_completion(self, view, identifier):
         """tries a simple hack (import+dir()) to help
