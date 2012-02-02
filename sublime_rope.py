@@ -21,6 +21,8 @@ from rope.base.taskhandle import TaskHandle
 class PythonEventListener(sublime_plugin.EventListener):
     '''Updates Rope's database in response to events (e.g. post_save)'''
     def on_post_save(self, view):
+        if not "Python" in view.settings().get('syntax'):
+            return
         with ropemate.RopeContext(view) as context:
             context.importer.generate_cache(
                 resources=[context.resource])
