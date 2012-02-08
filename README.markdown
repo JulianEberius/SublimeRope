@@ -27,6 +27,8 @@ Available Commands:
 * Jump to Global: Shows a list of project globals in a quickview and allows to jump to them.
 * Import assist: Looks for possible imports from the project starting with the prefix under the cursor. Will automatically insert the "from X import Z" statement.
 
+*Suppressing Default Completions*: Some people prefer to disable the default keyword-based (lexical) completion that ST2 offers. This can be achieved by setting "suppress_default_completions" to true in SublimeRope.sublime_settings, after copying the settings file to your User directory. The default setting shows both Rope and default completions.
+
 Key Bindings
 ------------
 
