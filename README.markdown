@@ -24,6 +24,8 @@ Available Commands:
 * Show Documentation
 * Refactor->Rename
 * Refactor->Extract Method
+* Refactor->Extract Variable
+* Refactor->Inline Variable
 * Jump to Global: Shows a list of project globals in a quickview and allows to jump to them.
 * Import assist: Looks for possible imports from the project starting with the prefix under the cursor. Will automatically insert the "from X import Z" statement.
 
