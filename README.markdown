@@ -54,6 +54,16 @@ SublimeRope provides no default keybindings at the moment, so you need to set th
             { "key": "selector", "operator": "equal", "operand": "source.python" }
         ]
     },
+    { "keys": ["ctrl+r", "ctrl+v"], "command": "python_refactor_extract_variable", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python" }
+        ]
+    },
+    { "keys": ["ctrl+r", "ctrl+n"], "command": "python_refactor_inline_variable", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python" }
+        ]
+    },
     { "keys": ["ctrl+r", "ctrl+j"], "command": "python_jump_to_global", "context":
         [
             { "key": "selector", "operator": "equal", "operand": "source.python" }

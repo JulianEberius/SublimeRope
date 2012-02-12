@@ -13,7 +13,8 @@ import rope
 import ropemate
 from rope.contrib import codeassist
 from rope.refactor.rename import Rename
-from rope.refactor.extract import ExtractMethod
+from rope.refactor.extract import ExtractMethod, ExtractVariable
+from rope.refactor.inline import InlineVariable
 from rope.base.exceptions import ModuleSyntaxError
 from rope.base.taskhandle import TaskHandle
 
@@ -326,6 +327,48 @@ class PythonRefactorExtractMethod(AbstractPythonRefactoring, sublime_plugin.Text
 
     def create_refactoring_operation(self, project, resource, start, end):
         return ExtractMethod(project, resource, start, end)
+
+
+class PythonRefactorExtractVariable(AbstractPythonRefactoring, sublime_plugin.TextCommand):
+    '''Creates a new variable from the selected lines'''
+    def __init__(self, *args, **kwargs):
+        AbstractPythonRefactoring.__init__(self, message="New variable name")
+        sublime_plugin.TextCommand.__init__(self, *args, **kwargs)
+
+    def default_input(self):
+        return "new_variable"
+
+    def get_changes(self, input_str):
+        return self.refactoring.get_changes(input_str)
+
+    def create_refactoring_operation(self, project, resource, start, end):
+        return ExtractVariable(project, resource, start, end)
+
+
+class PythonRefactorInlineVariable(AbstractPythonRefactoring, sublime_plugin.TextCommand):
+    '''Inline the current variable'''
+    def __init__(self, *args, **kwargs):
+        AbstractPythonRefactoring.__init__(self, message='Inline all occurred?')
+        sublime_plugin.TextCommand.__init__(self, *args, **kwargs)
+
+    def default_input(self):
+        return "yes"
+
+    def input_callback(self, input_str):
+        if input_str in ('no', 'n'):
+            only_current = True
+        elif input_str in ('yes', 'y'):
+            only_current = False
+        else:
+            return
+        return AbstractPythonRefactoring.input_callback(self, only_current)
+
+    def get_changes(self, only_current):
+        return self.refactoring.get_changes(remove=(not only_current),
+                                            only_current=only_current)
+
+    def create_refactoring_operation(self, project, resource, start, end):
+        return InlineVariable(project, resource, start)
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
