@@ -24,6 +24,8 @@ Available Commands:
 * Show Documentation
 * Refactor->Rename
 * Refactor->Extract Method
+* Refactor->Extract Variable
+* Refactor->Inline Variable
 * Jump to Global: Shows a list of project globals in a quickview and allows to jump to them.
 * Import assist: Looks for possible imports from the project starting with the prefix under the cursor. Will automatically insert the "from X import Z" statement.
 
@@ -50,6 +52,16 @@ SublimeRope provides no default keybindings at the moment, so you need to set th
         ]
     },
     { "keys": ["ctrl+r", "ctrl+e"], "command": "python_refactor_extract_method", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python" }
+        ]
+    },
+    { "keys": ["ctrl+r", "ctrl+v"], "command": "python_refactor_extract_variable", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python" }
+        ]
+    },
+    { "keys": ["ctrl+r", "ctrl+n"], "command": "python_refactor_inline_variable", "context":
         [
             { "key": "selector", "operator": "equal", "operand": "source.python" }
         ]
