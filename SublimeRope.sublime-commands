@@ -26,5 +26,13 @@
     {
         "caption": "Rope Refactoring: Extract Method",
         "command": "python_refactor_extract_method"
+    },
+    {
+        "caption": "Rope Refactoring: Extract Variable",
+        "command": "python_refactor_extract_variable"
+    },
+    {
+        "caption": "Rope Refactoring: Inline Variable",
+        "command": "python_refactor_inline_variable"
     }
 ]
