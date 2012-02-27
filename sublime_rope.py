@@ -402,7 +402,7 @@ class PythonRegenerateCache(sublime_plugin.TextCommand):
     def run(self, edit):
         with ropemate.RopeContext(self.view) as context:
             context.importer.clear_cache()
-            context.importer.generate_cache()
+            context.build_cache()
 
 
 class RopeNewProject(sublime_plugin.WindowCommand):

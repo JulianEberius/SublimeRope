@@ -5,6 +5,7 @@ import sublime
 import tempfile
 
 from rope.base import project, libutils
+from rope.base.fscommands import FileSystemCommands
 from rope.contrib import autoimport
 
 
@@ -22,14 +23,15 @@ class RopeContext(object):
         file_path = self.view.file_name()
         if file_path is None:
             # unsaved buffer
-            file_path = self.create_temp_file()
-        project_dir = self.find_ropeproject(file_path)
+            file_path = self._create_temp_file()
+        project_dir = self._find_ropeproject(file_path)
         if project_dir:
-            self.project = project.Project(project_dir)
+            self.project = project.Project(project_dir, fscommands=FileSystemCommands())
             self.importer = autoimport.AutoImport(
                 project=self.project, observe=True)
             if not os.path.exists("%s/.ropeproject/globalnames" % project_dir):
-                self.importer.generate_cache()
+                # self.importer.generate_cache()
+                self.build_cache()
             if os.path.exists("%s/__init__.py" % project_dir):
                 sys.path.append(project_dir)
         else:
@@ -40,12 +42,12 @@ class RopeContext(object):
 
             self.project = project.Project(
                 ropefolder=None, projectroot=folder,
-                ignored_resources=ignored_res)
+                ignored_resources=ignored_res, fscommands=FileSystemCommands())
             self.importer = autoimport.AutoImport(
                 project=self.project, observe=True)
 
         self.resource = libutils.path_to_resource(self.project, file_path)
-        update_python_path(self.project.prefs.get('python_path', []))
+        _update_python_path(self.project.prefs.get('python_path', []))
         self.input = self.view.substr(sublime.Region(0, self.view.size()))
 
         return self
@@ -56,15 +58,22 @@ class RopeContext(object):
         if self.tmpfile is not None:
             os.remove(self.tmpfile.name)
 
-    def create_temp_file(self):
+    def build_cache(self):
+        # project_files = self.project.pycore.get_python_files()
+        # py_path_dirs = self.project.pycore.get_python_path_folders()
+        # print map(lambda x: x.real_path, project_files+py_path_dirs)
+        # self.importer.generate_cache(project_files + py_path_dirs)
+        self.importer.generate_cache()
+
+    def _create_temp_file(self):
         self.tmpfile = tempfile.NamedTemporaryFile(delete=False)
         text = self.view.substr(sublime.Region(0, self.view.size()))
         self.tmpfile.write(text)
         self.tmpfile.close()
         return self.tmpfile.name
 
-    def find_ropeproject(self, file_dir):
-        def traverse_upward(look_for, start_at="."):
+    def _find_ropeproject(self, file_dir):
+        def _traverse_upward(look_for, start_at="."):
             p = os.path.abspath(start_at)
 
             while True:
@@ -75,11 +84,11 @@ class RopeContext(object):
                     return None
                 p = new_p
 
-        return traverse_upward(
+        return _traverse_upward(
             ".ropeproject", start_at=os.path.split(file_dir)[0])
 
 
-def update_python_path(paths):
+def _update_python_path(paths):
     "update sys.path and make sure the new items come first"
     old_sys_path_items = list(sys.path)
 
