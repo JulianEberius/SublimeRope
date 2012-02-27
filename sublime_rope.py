@@ -436,16 +436,9 @@ class RopeNewProject(sublime_plugin.WindowCommand):
             virtualenv = None
         else:
             path = os.path.expanduser(path)
-            site_p_dir = glob.glob(
-                os.path.join(path, "lib", "python*", "site-packages"))
-            if not len(site_p_dir) == 1:
-                error = '''Did not find a virtualenv at %s.
-    Looking for path matching %s/lib/python*/site-packages'''
-                sublime.error_message(error % (path, path))
+            virtualenv = self._find_virtualenv(path)
+            if not virtualenv:
                 return
-            else:
-                virtualenv = site_p_dir[0]
-
         try:
             project = rope.base.project.Project(
                 projectroot=self.proj_dir)
@@ -467,3 +460,22 @@ class RopeNewProject(sublime_plugin.WindowCommand):
             msg = "Could not create project folder at %s.\nException: %s"
             sublime.error_message(msg % (self.proj_dir, str(e)))
             return
+
+    def _find_virtualenv(self, path):
+        if sublime.platform() == "windows":
+            site_p_dir = glob.glob(
+                os.path.join(path, "Lib", "site-packages"))
+            error = '''Did not find a virtualenv at %s.
+Looking for path matching %s/Lib/site-packages'''
+        else: # "linux", "osx"
+            site_p_dir = glob.glob(
+                os.path.join(path, "lib", "python*", "site-packages"))
+            error = '''Did not find a virtualenv at %s.
+Looking for path matching %s/lib/python*/site-packages'''
+
+        if not len(site_p_dir) == 1:
+            sublime.error_message(error % (path, path))
+            virtualenv = None
+        else:
+            virtualenv = site_p_dir[0]
+        return virtualenv
