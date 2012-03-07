@@ -468,8 +468,11 @@ class RopeNewProject(sublime_plugin.WindowCommand):
             error = '''Did not find a virtualenv at %s.
 Looking for path matching %s/Lib/site-packages'''
         else: # "linux", "osx"
+            cwd = os.getcwd()
+            os.chdir(self.proj_dir)
             site_p_dir = glob.glob(
                 os.path.join(path, "lib", "python*", "site-packages"))
+            os.chdir(cwd)
             error = '''Did not find a virtualenv at %s.
 Looking for path matching %s/lib/python*/site-packages'''
 
