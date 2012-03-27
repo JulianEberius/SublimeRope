@@ -26,7 +26,8 @@ class RopeContext(object):
             file_path = self._create_temp_file()
         project_dir = self._find_ropeproject(file_path)
         if project_dir:
-            self.project = project.Project(project_dir, fscommands=FileSystemCommands())
+            self.project = \
+                project.Project(project_dir, fscommands=FileSystemCommands())
             self.importer = autoimport.AutoImport(
                 project=self.project, observe=True)
             if not os.path.exists("%s/.ropeproject/globalnames" % project_dir):
