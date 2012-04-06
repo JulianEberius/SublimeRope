@@ -4,6 +4,7 @@ import sys
 import os
 import glob
 import re
+import ast
 
 # always import the bundled rope
 path = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
@@ -15,8 +16,10 @@ from rope.contrib import codeassist
 from rope.refactor.rename import Rename
 from rope.refactor.extract import ExtractMethod, ExtractVariable
 from rope.refactor.inline import InlineVariable
+from rope.refactor.restructure import Restructure
 from rope.base.exceptions import ModuleSyntaxError
 from rope.base.taskhandle import TaskHandle
+from rope.base.pycore import ModuleNotFoundError
 
 
 class PythonEventListener(sublime_plugin.EventListener):
@@ -306,8 +309,7 @@ class AbstractPythonRefactoring(object):
 
             row, col = self.original_loc
             path = self.view.file_name() + ":%i:%i" % (row + 1, col + 1)
-            self.view.window().open_file(
-                path, sublime.ENCODED_POSITION)
+            self.view.window().open_file(path, sublime.ENCODED_POSITION)
 
     def default_input(self):
         raise NotImplemented
@@ -403,6 +405,72 @@ class PythonRefactorInlineVariable(AbstractPythonRefactoring,
 
     def create_refactoring_operation(self, project, resource, start, end):
         return InlineVariable(project, resource, start)
+
+
+class PythonRefactorRestructure(sublime_plugin.TextCommand):
+    '''Reestruture coincidences'''
+
+    def run(self, edit, block=False):
+        self.messages = ['Pattern', 'Goal', 'Args']
+        self.defaults = ["${}", "${}", "{'': 'name='}"]
+        self.args = []
+
+        self.view.run_command("save")
+        self.original_loc = self.view.rowcol(self.view.sel()[0].a)
+        self._window = self.view.window()
+        self._window.show_input_panel(
+            self.messages[0], self.defaults[0], self.get_goal,
+            None, None
+        )
+
+    def get_goal(self, input_str):
+        if input_str in self.defaults:
+            sublime.status_message('You will provide valid pattern for this'
+                ' restructure. Cancelling...')
+            return
+
+        self.args.append(str(input_str))
+        self._window.show_input_panel(
+            self.messages[1], self.defaults[1], self.get_args,
+            None, None
+        )
+
+    def get_args(self, input_str):
+        if input_str in self.defaults:
+            sublime.status_message('You will provide valid arguments for this'
+                ' renstructure. Cancelling...')
+            return
+
+        self.args.append(str(input_str))
+        self._window.show_input_panel(
+            self.messages[2], self.defaults[2], self.process_args,
+            None, None
+        )
+
+    def process_args(self, input_str):
+        if input_str in self.defaults:
+            sublime.status_message('You will provide valid arguments for this'
+                ' renstructure. Cancelling...')
+            return
+
+        try:
+            self.args.append(ast.literal_eval(input_str))
+        except:
+            sublime.error_message("Malformed string detected in Args.\n\n"
+                "The Args value must be a Python dictionary")
+            return
+
+        with ropemate.RopeContext(self.view) as context:
+            self.refactoring = Restructure(
+                context.project, self.args[0], self.args[1], self.args[2])
+
+            self.changes = self.refactoring.get_changes()
+
+            try:
+                context.project.do(self.changes)
+                sublime.error_message(self.changes.get_description())
+            except ModuleNotFoundError, e:
+                sublime.error_message(e)
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
