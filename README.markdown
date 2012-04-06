@@ -26,6 +26,7 @@ Available Commands:
 * Refactor->Extract Method
 * Refactor->Extract Variable
 * Refactor->Inline Variable
+* Refactor->Restructure
 * Jump to Global: Shows a list of project globals in a quickview and allows to jump to them.
 * Import assist: Looks for possible imports from the project starting with the prefix under the cursor. Will automatically insert the "from X import Z" statement.
 
@@ -81,6 +82,7 @@ SublimeRope provides no default keybindings at the moment, so you need to set th
             { "key": "selector", "operator": "equal", "operand": "source.python" }
         ]
     },
+    { "keys": ["ctrl+r", "ctrl+f"], "command": "python_refactor_restructure" }
 
 
 Getting all completions to work
