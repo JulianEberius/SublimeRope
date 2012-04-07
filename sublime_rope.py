@@ -1,5 +1,6 @@
 import sublime_plugin
 import sublime
+import threading
 import sys
 import os
 import glob
@@ -499,14 +500,26 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                 window.open_file(path, sublime.ENCODED_POSITION)
 
 
+class PythonRegenerateCacheApiCall(threading.Thread):
+    '''Regenerate cache Threading API'''
+    def __init__(self, view, timeout):
+        self.view = view
+        self.timeout = timeout
+        threading.Thread.__init__(self)
+
+    def run(self):
+        with ropemate.RopeContext(self.view) as context:
+            context.importer.clear_cache()
+            context.build_cache()
+
+
 class PythonRegenerateCache(sublime_plugin.TextCommand):
     '''Regenerates the cache used for jump-to-globals and auto-imports.
     It is regenerated partially on every save, but sometimes a full regenerate
     might be neceessary.'''
     def run(self, edit):
-        with ropemate.RopeContext(self.view) as context:
-            context.importer.clear_cache()
-            context.build_cache()
+        thread = PythonRegenerateCacheApiCall(self.view, 5)
+        thread.start()
 
 
 class RopeNewProject(sublime_plugin.WindowCommand):
