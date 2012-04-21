@@ -408,10 +408,15 @@ class PythonRefactorInlineVariable(AbstractPythonRefactoring,
         return InlineVariable(project, resource, start)
 
 
-class PythonRefactorRestructure(sublime_plugin.TextCommand):
+class PythonRefactorRestructureApiCall(threading.Thread):
     '''Reestruture coincidences'''
 
-    def run(self, edit, block=False):
+    def __init__(self, view, timeout):
+        self.view = view
+        self.timeout = timeout
+        threading.Thread.__init__(self)
+
+    def run(self):
         self.messages = ['Pattern', 'Goal', 'Args']
         self.defaults = ["${}", "${}", "{'': 'name='}"]
         self.args = []
@@ -472,6 +477,13 @@ class PythonRefactorRestructure(sublime_plugin.TextCommand):
                 sublime.error_message(self.changes.get_description())
             except ModuleNotFoundError, e:
                 sublime.error_message(e)
+
+
+class PythonRefactorRestructure(sublime_plugin.TextCommand):
+    '''Reestruture coincidences'''
+    def run(self, edit, block=False):
+        thread = PythonRefactorRestructureApiCall(self.view, 5)
+        thread.start()
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
