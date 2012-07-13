@@ -19,8 +19,9 @@ def context_for(view):
 
     project_dir = _find_ropeproject(file_path)
     if project_dir in project_cache:
-        print "reusing project"
         ctx = project_cache[project_dir]
+        if ctx.building:
+            return RopeContext(view, single_file=True)
         ctx.view = view
         ctx.file_path = view.file_name()
         return ctx
@@ -34,12 +35,13 @@ def context_for(view):
 class RopeContext(object):
     """a context manager to have a rope project context"""
 
-    def __init__(self, view):
+    def __init__(self, view, single_file=False):
         self.view = view
         self.project = None
         self.resource = None
         self.tmpfile = None
         self.input = ""
+        self.building = False
 
         self.file_path = self.view.file_name()
         if self.file_path is None:
@@ -47,7 +49,7 @@ class RopeContext(object):
             self.file_path = self._create_temp_file()
         self.project_dir = _find_ropeproject(self.file_path)
 
-        if self.project_dir:
+        if not single_file and self.project_dir:
             self.project = project.Project(self.project_dir, fscommands=FileSystemCommands())
             self.importer = autoimport.AutoImport(
                 project=self.project, observe=False)
@@ -67,7 +69,6 @@ class RopeContext(object):
 
     def __enter__(self):
         self.resource = libutils.path_to_resource(self.project, self.file_path)
-        # _update_python_path(self.project.prefs.get('python_path', []))
         self.input = self.view.substr(sublime.Region(0, self.view.size()))
         return self
 
@@ -109,19 +110,3 @@ def _find_ropeproject(file_dir):
 
     return _traverse_upward(
         ".ropeproject", start_at=os.path.split(file_dir)[0])
-
-
-def _update_python_path(paths):
-    "update sys.path and make sure the new items come first"
-    old_sys_path_items = list(sys.path)
-
-    for path in paths:
-        # see if it is a site dir
-        if path.find('site-packages') != -1:
-            site.addsitedir(path)
-        else:
-            sys.path.insert(0, path)
-
-    # Reorder sys.path so new directories at the front.
-    new_sys_path_items = set(sys.path) - set(old_sys_path_items)
-    sys.path = list(new_sys_path_items) + old_sys_path_items

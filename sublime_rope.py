@@ -1052,19 +1052,22 @@ class PythonRegenerateCache(sublime_plugin.TextCommand):
     might be neceessary.'''
 
     class RegenerateCacheThread(threading.Thread):
-        def __init__(self, ctx, timeout):
+        def __init__(self, ctx):
             self.ctx = ctx
-            self.timeout = timeout
             threading.Thread.__init__(self)
 
         def run(self):
-            with self.ctx as context:
-                context.importer.clear_cache()
-                context.build_cache()
+            self.ctx.importer.clear_cache()
+            self.ctx.build_cache()
+            self.ctx.__exit__(None, None, None)
+            self.ctx.building = False
 
     def run(self, edit):
         ctx = ropemate.context_for(self.view)
-        thread = PythonRegenerateCache.RegenerateCacheThread(ctx, 30)
+        ctx.building = True
+        # we have to enter on main, but build on worker thread
+        ctx.__enter__()
+        thread = PythonRegenerateCache.RegenerateCacheThread(ctx)
         thread.start()
 
 
