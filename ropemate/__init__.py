@@ -20,16 +20,14 @@ def context_for(view):
     project_dir = _find_ropeproject(file_path)
     if project_dir in project_cache:
         print "reusing project"
-        return project_cache[project_dir]
-    elif file_path in project_cache:
-        print "reusing for file"
-        return project_cache[file_path]
+        ctx = project_cache[project_dir]
+        ctx.view = view
+        ctx.file_path = view.file_name()
+        return ctx
     else:
         ctx = RopeContext(view)
         if project_dir:
             project_cache[project_dir] = ctx
-        else:
-            project_cache[file_path] = ctx
         return ctx
 
 
@@ -53,9 +51,6 @@ class RopeContext(object):
             self.project = project.Project(self.project_dir, fscommands=FileSystemCommands())
             self.importer = autoimport.AutoImport(
                 project=self.project, observe=False)
-            if not os.path.exists("%s/.ropeproject/globalnames" % self.project_dir):
-                # self.importer.generate_cache()
-                self.build_cache()
             if os.path.exists("%s/__init__.py" % self.project_dir):
                 sys.path.append(self.project_dir)
         else:
@@ -83,7 +78,14 @@ class RopeContext(object):
             os.remove(self.tmpfile.name)
 
     def build_cache(self):
+        key = "building_cache_for_" + self.project.address
+        sublime.set_timeout(
+            lambda: self.view.set_status(key, "Building Rope cache ..."),
+            0)
         self.importer.generate_cache()
+        sublime.set_timeout(
+            lambda: self.view.erase_status(key),
+            0)
 
     def _create_temp_file(self):
         self.tmpfile = tempfile.NamedTemporaryFile(delete=False)
