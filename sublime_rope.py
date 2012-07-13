@@ -24,7 +24,7 @@ class PythonEventListener(sublime_plugin.EventListener):
     def on_post_save(self, view):
         if not "Python" in view.settings().get('syntax'):
             return
-        with ropemate.RopeContext(view) as context:
+        with ropemate.context_for(view) as context:
             context.importer.generate_cache(
                 resources=[context.resource])
 
@@ -51,7 +51,7 @@ class PythonCompletions(sublime_plugin.EventListener):
         if not view.match_selector(locations[0], "source.python"):
             return []
 
-        with ropemate.RopeContext(view) as context:
+        with ropemate.context_for(view) as context:
             loc = locations[0]
             try:
                 raw_proposals = codeassist.code_assist(
@@ -139,7 +139,7 @@ class PythonGetDocumentation(sublime_plugin.TextCommand):
         view = self.view
         row, col = view.rowcol(view.sel()[0].a)
         offset = view.text_point(row, col)
-        with ropemate.RopeContext(view) as context:
+        with ropemate.context_for(view) as context:
             try:
                 doc = codeassist.get_doc(
                     context.project, context.input, offset, context.resource,
@@ -173,7 +173,7 @@ class PythonJumpToGlobal(sublime_plugin.TextCommand):
     """Allows the user to select from a list of all known globals
     in a quick panel to jump there."""
     def run(self, edit):
-        with ropemate.RopeContext(self.view) as context:
+        with ropemate.context_for(self.view) as context:
             self.names = list(context.importer.get_all_names())
             self.view.window().show_quick_panel(
                 self.names, self.on_select_global, sublime.MONOSPACE_FONT)
@@ -185,7 +185,7 @@ class PythonJumpToGlobal(sublime_plugin.TextCommand):
 
         if choice is not -1:
             selected_global = self.names[choice]
-            with ropemate.RopeContext(self.view) as context:
+            with ropemate.context_for(self.view) as context:
                 self.locs = context.importer.get_name_locations(selected_global)
                 self.locs = map(loc_to_str, self.locs)
 
@@ -199,7 +199,7 @@ class PythonJumpToGlobal(sublime_plugin.TextCommand):
 
     def on_select_location(self, choice):
         loc = self.locs[choice]
-        with ropemate.RopeContext(self.view) as context:
+        with ropemate.context_for(self.view) as context:
             path, line = loc.split(":")
             path = context.project._get_resource_path(path)
             self.view.window().open_file("%s:%s" % (path, line), sublime.ENCODED_POSITION)
@@ -212,7 +212,7 @@ class PythonAutoImport(sublime_plugin.TextCommand):
         view = self.view
         row, col = view.rowcol(view.sel()[0].a)
         self.offset = view.text_point(row, col)
-        with ropemate.RopeContext(view) as context:
+        with ropemate.context_for(view) as context:
             word = self.view.substr(self.view.word(self.offset))
             self.candidates = list(context.importer.import_assist(word))
             self.view.window().show_quick_panel(
@@ -222,7 +222,7 @@ class PythonAutoImport(sublime_plugin.TextCommand):
     def on_select_global(self, choice):
         if choice is not -1:
             name, module = self.candidates[choice]
-            with ropemate.RopeContext(self.view) as context:
+            with ropemate.context_for(self.view) as context:
                 # check whether adding an import is necessary, and where
                 all_lines = self.view.lines(sublime.Region(0, self.view.size()))
                 line_no = context.importer.find_insertion_line(context.input)
@@ -254,7 +254,7 @@ class AbstractPythonRefactoring(object):
     def run(self, edit, block=False):
         self.view.run_command("save")
         self.original_loc = self.view.rowcol(self.view.sel()[0].a)
-        with ropemate.RopeContext(self.view) as context:
+        with ropemate.context_for(self.view) as context:
             self.sel = self.view.sel()[0]
 
             self.refactoring = self.create_refactoring_operation(
@@ -263,7 +263,7 @@ class AbstractPythonRefactoring(object):
                 self.message, self.default_input(), self.input_callback, None, None)
 
     def input_callback(self, input_str):
-        with ropemate.RopeContext(self.view) as context:
+        with ropemate.context_for(self.view) as context:
             if input_str is None:
                 return
             changes = self.get_changes(input_str)
@@ -374,7 +374,7 @@ class PythonRefactorInlineVariable(AbstractPythonRefactoring, sublime_plugin.Tex
 class GotoPythonDefinition(sublime_plugin.TextCommand):
     '''Shows the definition of the identifier under the cursor, project-wide.'''
     def run(self, edit, block=False):
-        with ropemate.RopeContext(self.view) as context:
+        with ropemate.context_for(self.view) as context:
             offset = self.view.sel()[0].a
             found_resource, line = None, None
             try:
@@ -400,7 +400,7 @@ class PythonRegenerateCache(sublime_plugin.TextCommand):
     It is regenerated partially on every save, but sometimes a full regenerate
     might be neceessary.'''
     def run(self, edit):
-        with ropemate.RopeContext(self.view) as context:
+        with ropemate.context_for(self.view) as context:
             context.importer.clear_cache()
             context.build_cache()
 

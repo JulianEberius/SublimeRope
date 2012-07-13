@@ -8,6 +8,30 @@ from rope.base import project, libutils
 from rope.base.fscommands import FileSystemCommands
 from rope.contrib import autoimport
 
+project_cache = {}
+
+
+def context_for(view):
+    file_path = view.file_name()
+    if file_path is None:
+        # unsaved buffer
+        return RopeContext(view)
+
+    project_dir = _find_ropeproject(file_path)
+    if project_dir in project_cache:
+        print "reusing project"
+        return project_cache[project_dir]
+    elif file_path in project_cache:
+        print "reusing for file"
+        return project_cache[file_path]
+    else:
+        ctx = RopeContext(view)
+        if project_dir:
+            project_cache[project_dir] = ctx
+        else:
+            project_cache[file_path] = ctx
+        return ctx
+
 
 class RopeContext(object):
     """a context manager to have a rope project context"""
@@ -19,37 +43,37 @@ class RopeContext(object):
         self.tmpfile = None
         self.input = ""
 
-    def __enter__(self):
-        file_path = self.view.file_name()
-        if file_path is None:
+        self.file_path = self.view.file_name()
+        if self.file_path is None:
             # unsaved buffer
-            file_path = self._create_temp_file()
-        project_dir = self._find_ropeproject(file_path)
-        if project_dir:
-            self.project = project.Project(project_dir, fscommands=FileSystemCommands())
+            self.file_path = self._create_temp_file()
+        self.project_dir = _find_ropeproject(self.file_path)
+
+        if self.project_dir:
+            self.project = project.Project(self.project_dir, fscommands=FileSystemCommands())
             self.importer = autoimport.AutoImport(
-                project=self.project, observe=True)
-            if not os.path.exists("%s/.ropeproject/globalnames" % project_dir):
+                project=self.project, observe=False)
+            if not os.path.exists("%s/.ropeproject/globalnames" % self.project_dir):
                 # self.importer.generate_cache()
                 self.build_cache()
-            if os.path.exists("%s/__init__.py" % project_dir):
-                sys.path.append(project_dir)
+            if os.path.exists("%s/__init__.py" % self.project_dir):
+                sys.path.append(self.project_dir)
         else:
             # create a single-file project(ignoring other files in the folder)
-            folder = os.path.dirname(file_path)
+            folder = os.path.dirname(self.file_path)
             ignored_res = os.listdir(folder)
-            ignored_res.remove(os.path.basename(file_path))
+            ignored_res.remove(os.path.basename(self.file_path))
 
             self.project = project.Project(
                 ropefolder=None, projectroot=folder,
                 ignored_resources=ignored_res, fscommands=FileSystemCommands())
             self.importer = autoimport.AutoImport(
-                project=self.project, observe=True)
+                project=self.project, observe=False)
 
-        self.resource = libutils.path_to_resource(self.project, file_path)
-        _update_python_path(self.project.prefs.get('python_path', []))
+    def __enter__(self):
+        self.resource = libutils.path_to_resource(self.project, self.file_path)
+        # _update_python_path(self.project.prefs.get('python_path', []))
         self.input = self.view.substr(sublime.Region(0, self.view.size()))
-
         return self
 
     def __exit__(self, type, value, traceback):
@@ -59,10 +83,6 @@ class RopeContext(object):
             os.remove(self.tmpfile.name)
 
     def build_cache(self):
-        # project_files = self.project.pycore.get_python_files()
-        # py_path_dirs = self.project.pycore.get_python_path_folders()
-        # print map(lambda x: x.real_path, project_files+py_path_dirs)
-        # self.importer.generate_cache(project_files + py_path_dirs)
         self.importer.generate_cache()
 
     def _create_temp_file(self):
@@ -72,20 +92,21 @@ class RopeContext(object):
         self.tmpfile.close()
         return self.tmpfile.name
 
-    def _find_ropeproject(self, file_dir):
-        def _traverse_upward(look_for, start_at="."):
-            p = os.path.abspath(start_at)
 
-            while True:
-                if look_for in os.listdir(p):
-                    return p
-                new_p = os.path.abspath(os.path.join(p, ".."))
-                if new_p == p:
-                    return None
-                p = new_p
+def _find_ropeproject(file_dir):
+    def _traverse_upward(look_for, start_at="."):
+        p = os.path.abspath(start_at)
 
-        return _traverse_upward(
-            ".ropeproject", start_at=os.path.split(file_dir)[0])
+        while True:
+            if look_for in os.listdir(p):
+                return p
+            new_p = os.path.abspath(os.path.join(p, ".."))
+            if new_p == p:
+                return None
+            p = new_p
+
+    return _traverse_upward(
+        ".ropeproject", start_at=os.path.split(file_dir)[0])
 
 
 def _update_python_path(paths):
