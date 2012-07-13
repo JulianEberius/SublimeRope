@@ -51,6 +51,8 @@ class PythonCompletions(sublime_plugin.EventListener):
             settings = sublime.load_settings("SublimeRope.sublime-settings")
         self.suppress_default_completions = settings.get(
             "suppress_default_completions")
+        self.use_simple_completion = settings.get(
+            "use_simple_completion")
 
     def on_query_completions(self, view, prefix, locations):
         if not view.match_selector(locations[0], "source.python"):
@@ -64,7 +66,7 @@ class PythonCompletions(sublime_plugin.EventListener):
                     maxfixes=3, later_locals=False)
             except ModuleSyntaxError:
                 raw_proposals = []
-            if len(raw_proposals) <= 0:
+            if len(raw_proposals) <= 0 and self.use_simple_completion:
                 # try the simple hackish completion
                 line = view.substr(view.line(loc))
                 identifier = line[:view.rowcol(loc)[1]].strip(' .')

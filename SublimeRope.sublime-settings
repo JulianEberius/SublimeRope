@@ -1,3 +1,4 @@
 {
-    "suppress_default_completions": false
+    "suppress_default_completions": false,
+    "use_simple_completions": false
 }
