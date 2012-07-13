@@ -64,13 +64,6 @@ class PythonCompletions(sublime_plugin.EventListener):
                     maxfixes=3, later_locals=False)
             except ModuleSyntaxError:
                 raw_proposals = []
-            # if len(raw_proposals) <= 0:
-            #     # try the simple hackish completion
-            #     line = view.substr(view.line(loc))
-            #     identifier = line[:view.rowcol(loc)[1]].strip(' .')
-            #     if ' ' in identifier:
-            #         identifier = identifier.split(' ')[-1]
-            #     raw_proposals = self.simple_module_completion(view, identifier)
 
         proposals = codeassist.sorted_proposals(raw_proposals)
         proposals = [
@@ -86,62 +79,6 @@ class PythonCompletions(sublime_plugin.EventListener):
             )
         else:
             return proposals
-
-    def simple_module_completion(self, view, identifier):
-        """tries a simple hack (import+dir()) to help
-        completion of imported c-modules"""
-        result = []
-
-        path_added = os.path.split(view.file_name())[0]
-        sys.path.insert(0, path_added)
-
-        try:
-            if not identifier:
-                return []
-            module = None
-            try:
-                module = __import__(identifier)
-                if '.' in identifier:
-                    module = sys.modules[identifier]
-            except ImportError, e:
-                # print e, "PATH: ", sys.path
-                return []
-
-            names = dir(module)
-            for name in names:
-                if not name.startswith("__"):
-                    p = rope.contrib.codeassist.CompletionProposal(
-                        name, "imported", rope.base.pynames.UnboundName())
-                    result.append(p)
-
-            # if module is a package, check the directory
-            directory_completions = self.add_module_directory_completions(
-                module)
-            if directory_completions:
-                result.extend(directory_completions)
-        except Exception, e:
-            print e
-            return []
-
-        finally:
-            sys.path.remove(path_added)
-
-        return result
-
-    def add_module_directory_completions(self, module):
-        '''Another simple hack that helps with some packages: add all files in
-        a package as completion options'''
-        if hasattr(module, "__path__"):
-            result = []
-            in_dir_names = [os.path.split(n)[1]
-                for n in glob.glob(os.path.join(module.__path__[0], "*"))]
-            in_dir_names = set(os.path.splitext(n)[0]
-                for n in in_dir_names if "__init__" not in n)
-            for n in in_dir_names:
-                result.append(rope.contrib.codeassist.CompletionProposal(
-                    n, None, rope.base.pynames.UnboundName()))
-            return result
-        return None
 
 
 class PythonGetDocumentation(sublime_plugin.TextCommand):
