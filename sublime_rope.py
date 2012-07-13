@@ -1,9 +1,11 @@
 import sublime_plugin
 import sublime
+import threading
 import sys
 import os
 import glob
 import re
+import ast
 
 # always import the bundled rope
 path = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
@@ -15,8 +17,10 @@ from rope.contrib import codeassist
 from rope.refactor.rename import Rename
 from rope.refactor.extract import ExtractMethod, ExtractVariable
 from rope.refactor.inline import InlineVariable
+from rope.refactor.restructure import Restructure
 from rope.base.exceptions import ModuleSyntaxError
 from rope.base.taskhandle import TaskHandle
+from rope.base.pycore import ModuleNotFoundError
 
 
 class PythonEventListener(sublime_plugin.EventListener):
@@ -45,7 +49,8 @@ class PythonCompletions(sublime_plugin.EventListener):
     def load_settings(self, settings=None):
         if not settings:
             settings = sublime.load_settings("SublimeRope.sublime-settings")
-        self.suppress_default_completions = settings.get("suppress_default_completions")
+        self.suppress_default_completions = settings.get(
+            "suppress_default_completions")
 
     def on_query_completions(self, view, prefix, locations):
         if not view.match_selector(locations[0], "source.python"):
@@ -68,10 +73,17 @@ class PythonCompletions(sublime_plugin.EventListener):
                 raw_proposals = self.simple_module_completion(view, identifier)
 
         proposals = codeassist.sorted_proposals(raw_proposals)
-        proposals = [(proposal_string(p), p.name) for p in proposals if p.name != 'self=']
+        proposals = [
+            (proposal_string(p), p.name)
+            for p in proposals if p.name != 'self='
+        ]
 
         if self.suppress_default_completions:
-            return (proposals, sublime.INHIBIT_EXPLICIT_COMPLETIONS | sublime.INHIBIT_WORD_COMPLETIONS)
+            return (
+                proposals,
+                sublime.INHIBIT_EXPLICIT_COMPLETIONS |
+                sublime.INHIBIT_WORD_COMPLETIONS
+            )
         else:
             return proposals
 
@@ -150,14 +162,18 @@ class PythonGetDocumentation(sublime_plugin.TextCommand):
             except rope.base.exceptions.BadIdentifierError:
                 word = self.view.substr(self.view.word(offset))
                 self.view.set_status(
-                    "rope_documentation_error", "No documentation found for %s" % word)
+                    "rope_documentation_error",
+                    "No documentation found for %s" % word
+                )
 
                 def clear_status_callback():
                     self.view.erase_status("rope_documentation_error")
                 sublime.set_timeout(clear_status_callback, 5000)
 
     def output(self, string):
-        out_view = self.view.window().get_output_panel("rope_python_documentation")
+        out_view = self.view.window().get_output_panel(
+            "rope_python_documentation"
+        )
         r = sublime.Region(0, out_view.size())
         e = out_view.begin_edit()
         out_view.erase(e, r)
@@ -195,14 +211,20 @@ class PythonJumpToGlobal(sublime_plugin.TextCommand):
                     self.on_select_location(0)
                 else:
                     self.view.window().show_quick_panel(
-                        self.locs, self.on_select_location, sublime.MONOSPACE_FONT)
+                        self.locs,
+                        self.on_select_location,
+                        sublime.MONOSPACE_FONT
+                    )
 
     def on_select_location(self, choice):
         loc = self.locs[choice]
         with ropemate.context_for(self.view) as context:
             path, line = loc.split(":")
             path = context.project._get_resource_path(path)
-            self.view.window().open_file("%s:%s" % (path, line), sublime.ENCODED_POSITION)
+            self.view.window().open_file(
+                "%s:%s" % (path, line),
+                sublime.ENCODED_POSITION
+            )
 
 
 class PythonAutoImport(sublime_plugin.TextCommand):
@@ -224,12 +246,15 @@ class PythonAutoImport(sublime_plugin.TextCommand):
             name, module = self.candidates[choice]
             with ropemate.context_for(self.view) as context:
                 # check whether adding an import is necessary, and where
-                all_lines = self.view.lines(sublime.Region(0, self.view.size()))
+                all_lines = self.view.lines(
+                    sublime.Region(0, self.view.size())
+                )
                 line_no = context.importer.find_insertion_line(context.input)
                 insert_import_str = "from %s import %s\n" % (module, name)
                 existing_imports_str = self.view.substr(
                     sublime.Region(all_lines[0].a, all_lines[line_no - 1].b))
-                do_insert_import = insert_import_str not in existing_imports_str
+                do_insert_import = \
+                    insert_import_str not in existing_imports_str
                 insert_import_point = all_lines[line_no].a
 
                 # the word prefix that is replaced
@@ -246,8 +271,8 @@ class PythonAutoImport(sublime_plugin.TextCommand):
 
 class AbstractPythonRefactoring(object):
     '''Some common functionality for the rope refactorings.
-    Implement __init__, default_input, get_changes and create_refactoring_operation
-    in the subclasses to add a new refactoring.'''
+    Implement __init__, default_input, get_changes and
+    create_refactoring_operation in the subclasses to add a new refactoring.'''
     def __init__(self, message):
         self.message = message
 
@@ -260,7 +285,12 @@ class AbstractPythonRefactoring(object):
             self.refactoring = self.create_refactoring_operation(
                 context.project, context.resource, self.sel.a, self.sel.b)
             self.view.window().show_input_panel(
-                self.message, self.default_input(), self.input_callback, None, None)
+                self.message,
+                self.default_input(),
+                self.input_callback,
+                None,
+                None
+            )
 
     def input_callback(self, input_str):
         with ropemate.context_for(self.view) as context:
@@ -278,8 +308,7 @@ class AbstractPythonRefactoring(object):
 
             row, col = self.original_loc
             path = self.view.file_name() + ":%i:%i" % (row + 1, col + 1)
-            self.view.window().open_file(
-                path, sublime.ENCODED_POSITION)
+            self.view.window().open_file(path, sublime.ENCODED_POSITION)
 
     def default_input(self):
         raise NotImplemented
@@ -291,7 +320,8 @@ class AbstractPythonRefactoring(object):
         raise NotImplemented
 
 
-class PythonRefactorRename(AbstractPythonRefactoring, sublime_plugin.TextCommand):
+class PythonRefactorRename(AbstractPythonRefactoring,
+    sublime_plugin.TextCommand):
     '''Renames the identifier under the cursor throughout the project'''
     def __init__(self, *args, **kwargs):
         AbstractPythonRefactoring.__init__(self, message="New name")
@@ -312,9 +342,10 @@ class PythonRefactorRename(AbstractPythonRefactoring, sublime_plugin.TextCommand
         return Rename(project, resource, start)
 
 
-class PythonRefactorExtractMethod(AbstractPythonRefactoring, sublime_plugin.TextCommand):
-    '''Creates a new function or method (depending on the context) from the selected
-    lines'''
+class PythonRefactorExtractMethod(AbstractPythonRefactoring,
+    sublime_plugin.TextCommand):
+    '''Creates a new function or method (depending on the context) from the
+    selected lines'''
     def __init__(self, *args, **kwargs):
         AbstractPythonRefactoring.__init__(self, message="New method name")
         sublime_plugin.TextCommand.__init__(self, *args, **kwargs)
@@ -329,7 +360,8 @@ class PythonRefactorExtractMethod(AbstractPythonRefactoring, sublime_plugin.Text
         return ExtractMethod(project, resource, start, end)
 
 
-class PythonRefactorExtractVariable(AbstractPythonRefactoring, sublime_plugin.TextCommand):
+class PythonRefactorExtractVariable(AbstractPythonRefactoring,
+    sublime_plugin.TextCommand):
     '''Creates a new variable from the selected lines'''
     def __init__(self, *args, **kwargs):
         AbstractPythonRefactoring.__init__(self, message="New variable name")
@@ -345,10 +377,13 @@ class PythonRefactorExtractVariable(AbstractPythonRefactoring, sublime_plugin.Te
         return ExtractVariable(project, resource, start, end)
 
 
-class PythonRefactorInlineVariable(AbstractPythonRefactoring, sublime_plugin.TextCommand):
+class PythonRefactorInlineVariable(AbstractPythonRefactoring,
+    sublime_plugin.TextCommand):
     '''Inline the current variable'''
     def __init__(self, *args, **kwargs):
-        AbstractPythonRefactoring.__init__(self, message='Inline all occurred?')
+        AbstractPythonRefactoring.__init__(self,
+            message='Inline all occurred?'
+        )
         sublime_plugin.TextCommand.__init__(self, *args, **kwargs)
 
     def default_input(self):
@@ -371,8 +406,88 @@ class PythonRefactorInlineVariable(AbstractPythonRefactoring, sublime_plugin.Tex
         return InlineVariable(project, resource, start)
 
 
+class PythonRefactorRestructureApiCall(threading.Thread):
+    '''Reestruture coincidences'''
+
+    def __init__(self, view, timeout):
+        self.view = view
+        self.timeout = timeout
+        threading.Thread.__init__(self)
+
+    def run(self):
+        self.messages = ['Pattern', 'Goal', 'Args']
+        self.defaults = ["${}", "${}", "{'': 'name='}"]
+        self.args = []
+
+        self.view.run_command("save")
+        self.original_loc = self.view.rowcol(self.view.sel()[0].a)
+        self._window = self.view.window()
+        self._window.show_input_panel(
+            self.messages[0], self.defaults[0], self.get_goal,
+            None, None
+        )
+
+    def get_goal(self, input_str):
+        if input_str in self.defaults:
+            sublime.status_message('You will provide valid pattern for this'
+                ' restructure. Cancelling...')
+            return
+
+        self.args.append(str(input_str))
+        self._window.show_input_panel(
+            self.messages[1], self.defaults[1], self.get_args,
+            None, None
+        )
+
+    def get_args(self, input_str):
+        if input_str in self.defaults:
+            sublime.status_message('You will provide valid arguments for this'
+                ' renstructure. Cancelling...')
+            return
+
+        self.args.append(str(input_str))
+        self._window.show_input_panel(
+            self.messages[2], self.defaults[2], self.process_args,
+            None, None
+        )
+
+    def process_args(self, input_str):
+        if input_str in self.defaults:
+            sublime.status_message('You will provide valid arguments for this'
+                ' renstructure. Cancelling...')
+            return
+
+        try:
+            self.args.append(ast.literal_eval(input_str))
+        except:
+            sublime.error_message("Malformed string detected in Args.\n\n"
+                "The Args value must be a Python dictionary")
+            return
+
+        with ropemate.RopeContext(self.view) as context:
+            self.refactoring = Restructure(
+                context.project, self.args[0], self.args[1], self.args[2])
+
+            self.changes = self.refactoring.get_changes()
+
+            try:
+                context.project.do(self.changes)
+                sublime.error_message(self.changes.get_description())
+            except ModuleNotFoundError, e:
+                sublime.error_message(e)
+
+
+class PythonRefactorRestructure(sublime_plugin.TextCommand):
+    '''Reestruture coincidences'''
+    def run(self, edit, block=False):
+        thread = PythonRefactorRestructureApiCall(self.view, 5)
+        thread.start()
+
+
 class GotoPythonDefinition(sublime_plugin.TextCommand):
-    '''Shows the definition of the identifier under the cursor, project-wide.'''
+    '''
+    Shows the definition of the identifier under the cursor, project-wide.
+    '''
     def run(self, edit, block=False):
         with ropemate.context_for(self.view) as context:
             offset = self.view.sel()[0].a
@@ -395,19 +510,31 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                 window.open_file(path, sublime.ENCODED_POSITION)
 
 
-class PythonRegenerateCache(sublime_plugin.TextCommand):
-    '''Regenerates the cache used for jump-to-globals and auto-imports.
-    It is regenerated partially on every save, but sometimes a full regenerate
-    might be neceessary.'''
-    def run(self, edit):
+class PythonRegenerateCacheApiCall(threading.Thread):
+    '''Regenerate cache Threading API'''
+    def __init__(self, view, timeout):
+        self.view = view
+        self.timeout = timeout
+        threading.Thread.__init__(self)
+
+    def run(self):
         with ropemate.context_for(self.view) as context:
             context.importer.clear_cache()
             context.build_cache()
 
 
+class PythonRegenerateCache(sublime_plugin.TextCommand):
+    '''Regenerates the cache used for jump-to-globals and auto-imports.
+    It is regenerated partially on every save, but sometimes a full regenerate
+    might be neceessary.'''
+    def run(self, edit):
+        thread = PythonRegenerateCacheApiCall(self.view, 5)
+        thread.start()
+
+
 class RopeNewProject(sublime_plugin.WindowCommand):
-    '''Asks the user for project- and virtualenv directory and creates a configured
-    rope project with these values'''
+    '''Asks the user for project- and virtualenv directory and creates a
+    configured rope project with these values'''
     def run(self):
         folders = self.window.folders()
         suggested_folder = folders[0] if folders else os.path.expanduser("~")
@@ -467,7 +594,7 @@ class RopeNewProject(sublime_plugin.WindowCommand):
                 os.path.join(path, "Lib", "site-packages"))
             error = '''Did not find a virtualenv at %s.
 Looking for path matching %s/Lib/site-packages'''
-        else: # "linux", "osx"
+        else:  # "linux", "osx"
             cwd = os.getcwd()
             os.chdir(self.proj_dir)
             site_p_dir = glob.glob(
