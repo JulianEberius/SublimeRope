@@ -43,14 +43,18 @@ class PythonCompletions(sublime_plugin.EventListener):
     ''''Provides rope completions for the ST2 completion system.'''
     def __init__(self):
         s = sublime.load_settings("SublimeRope.sublime-settings")
-        s.add_on_change("suppress_default_completions", self.load_settings)
+        s.add_on_change("suppress_word_completions", self.load_settings)
+        s.add_on_change("suppress_explicit_completions", self.load_settings)
+        s.add_on_change("use_simple_completion", self.load_settings)
         self.load_settings(s)
 
     def load_settings(self, settings=None):
         if not settings:
             settings = sublime.load_settings("SublimeRope.sublime-settings")
-        self.suppress_default_completions = settings.get(
-            "suppress_default_completions")
+        self.suppress_word_completions = settings.get(
+            "suppress_word_completions")
+        self.suppress_explicit_completions = settings.get(
+            "suppress_explicit_completions")
         self.use_simple_completion = settings.get(
             "use_simple_completion")
 
@@ -80,27 +84,22 @@ class PythonCompletions(sublime_plugin.EventListener):
             for p in proposals if p.name != 'self='
         ]
 
-        if self.suppress_default_completions:
-            return (
-                proposals,
-                sublime.INHIBIT_EXPLICIT_COMPLETIONS |
-                sublime.INHIBIT_WORD_COMPLETIONS
-            )
-        else:
-            return proposals
+        completion_flags = 0
+        if self.suppress_word_completions:
+            completion_flags = sublime.INHIBIT_WORD_COMPLETIONS
+
+        if self.suppress_explicit_completions:
+            completion_flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
+
+        return (proposals, completion_flags)
 
     def simple_module_completion(self, view, identifier):
         """tries a simple hack (import+dir()) to help
         completion of imported c-modules"""
         result = []
 
-        path_added = None
-        filename = view.file_name()
-        if filename is not None:
-            # Not an unsaved buffer, take its path into account.
-            path_added = os.path.split(filename)[0]
-            sys.path.insert(0, path_added)
-
+        path_added = os.path.split(view.file_name())[0]
+        sys.path.insert(0, path_added)
         try:
             if not identifier:
                 return []
@@ -130,8 +129,7 @@ class PythonCompletions(sublime_plugin.EventListener):
             return []
 
         finally:
-            if path_added is not None:
-                sys.path.remove(path_added)
+            sys.path.remove(path_added)
 
         return result
 
@@ -145,6 +143,7 @@ class PythonCompletions(sublime_plugin.EventListener):
             in_dir_names = set(os.path.splitext(n)[0]
                 for n in in_dir_names if "__init__" not in n)
             for n in in_dir_names:
+                print "->", n
                 result.append(rope.contrib.codeassist.CompletionProposal(
                     n, "imported", rope.base.pynames.UnboundName()))
             return result
