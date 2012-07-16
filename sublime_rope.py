@@ -98,8 +98,13 @@ class PythonCompletions(sublime_plugin.EventListener):
         completion of imported c-modules"""
         result = []
 
-        path_added = os.path.split(view.file_name())[0]
-        sys.path.insert(0, path_added)
+        path_added = None
+        filename = view.file_name()
+        if filename is not None:
+            # Not an unsaved buffer, take its path into account.
+            path_added = os.path.split(filename)[0]
+            sys.path.insert(0, path_added)
+
         try:
             if not identifier:
                 return []
@@ -129,7 +134,8 @@ class PythonCompletions(sublime_plugin.EventListener):
             return []
 
         finally:
-            sys.path.remove(path_added)
+            if path_added is not None:
+                sys.path.remove(path_added)
 
         return result
 
@@ -143,7 +149,6 @@ class PythonCompletions(sublime_plugin.EventListener):
             in_dir_names = set(os.path.splitext(n)[0]
                 for n in in_dir_names if "__init__" not in n)
             for n in in_dir_names:
-                print "->", n
                 result.append(rope.contrib.codeassist.CompletionProposal(
                     n, "imported", rope.base.pynames.UnboundName()))
             return result
