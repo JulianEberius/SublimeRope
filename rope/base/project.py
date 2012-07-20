@@ -9,8 +9,7 @@ from rope.base import exceptions, taskhandle, prefs, history, pycore, utils
 from rope.base.resourceobserver import *
 from rope.base.resources import File, Folder, _ResourceMatcher
 
-default_conf_str = '''
-# The default ``config.py``
+default_conf_str = '''# The default ``config.py``
 
 
 def set_prefs(prefs):

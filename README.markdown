@@ -30,7 +30,23 @@ Available Commands:
 * Jump to Global: Shows a list of project globals in a quickview and allows to jump to them.
 * Import assist: Looks for possible imports from the project starting with the prefix under the cursor. Will automatically insert the "from X import Z" statement.
 
-*Suppressing Default Completions*: Some people prefer to disable the default keyword-based (lexical) completion that ST2 offers. This can be achieved by setting "suppress_default_completions" to true in SublimeRope.sublime_settings, after copying the settings file to your User directory. The default setting shows both Rope and default completions.
+*Completions types*
+
+ST2 offers three types of completions:
+
+* Word completions (complete from words present on the current buffer)
+* Explicit completions (those that you can define in syntax-specific files, such as "Python.sublime-completions")
+* Autocompletions from plugins.
+
+ Some people prefer to disable the default word and/or explicit completions that ST2 offers while using SublimeRope. This can be achieved by setting either of the following settings to true in SublimeRope.sublime_settings, after copying the settings file to your User directory.
+
+    * "suppress_word_completions"
+    * "suppress_explicit_completions"
+
+ The default settings shows SublimeRope and both word and explicit completions.
+
+SublimeRope provides completion suggestions based on the rope library, but also offers a fall-back method if rope suggest nothing. It is called the "simple_module_completion". Albeit it is sometimes useful, it is disabled by default because some people feel that it slows down the plugin too much. If you want to try it, you can enable it by setting "use_simple_completion" to true in the SublimeRope.sublime_settings file.
+
 
 Key Bindings
 ------------
@@ -88,7 +104,7 @@ SublimeRope provides no default keybindings at the moment, so you need to set th
 Getting all completions to work
 -------------------------------
 
-Basically, anthing you want completions for has to be on Rope's python path, which you can extend in <PROJECT_DIR>/.ropeproject/config.py.
+Basically, anything you want completions for has to be on Rope's python path, which you can extend in <PROJECT_DIR>/.ropeproject/config.py.
 
 If you are using virtualenv for your project, add the path to the virtualenv in .ropeproject/config.py (there should be a commented-out line already in the file in set_prefs). *UPDATE*: the "Rope: New Project" command should do this for you.
 

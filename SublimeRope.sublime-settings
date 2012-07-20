@@ -1,3 +1,5 @@
 {
-    "suppress_default_completions": false
+    "suppress_word_completions": false,
+    "suppress_explicit_completions": false,
+    "use_simple_completion": false
 }
