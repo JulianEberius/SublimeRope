@@ -444,7 +444,7 @@ class PythonRefactorRestructureApiCall(threading.Thread):
     def get_args(self, input_str):
         if input_str in self.defaults:
             sublime.status_message('You will provide valid arguments for this'
-                ' renstructure. Cancelling...')
+                ' restructure. Cancelling...')
             return
 
         self.args.append(str(input_str))
