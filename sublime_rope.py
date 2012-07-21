@@ -422,72 +422,61 @@ class PythonRefactorInlineVariable(AbstractPythonRefactoring,
 class PythonRefactorRestructure(sublime_plugin.TextCommand):
     '''Reestruture coincidences'''
 
-    class RestructureThread(threading.Thread):
+    def run(self, edit, block=False):
+        self.messages = ['Pattern', 'Goal', 'Args']
+        self.defaults = ["${}", "${}", "{'': 'name='}"]
+        self.args = []
 
-        def __init__(self, view, timeout):
-            self.view = view
-            self.timeout = timeout
-            threading.Thread.__init__(self)
+        self.view.run_command("save")
+        self.original_loc = self.view.rowcol(self.view.sel()[0].a)
+        self._window = self.view.window()
+        self._window.show_input_panel(
+            self.messages[0], self.defaults[0], self.get_goal,
+            None, None
+        )
 
-        def run(self):
-            self.messages = ['Pattern', 'Goal', 'Args']
-            self.defaults = ["${}", "${}", "{'': 'name='}"]
-            self.args = []
+    def get_goal(self, input_str):
+        if input_str in self.defaults:
+            sublime.status_message('You will provide valid pattern for this'
+                ' restructure. Cancelling...')
+            return
 
-            self.view.run_command("save")
-            self.original_loc = self.view.rowcol(self.view.sel()[0].a)
-            self._window = self.view.window()
-            self._window.show_input_panel(
-                self.messages[0], self.defaults[0], self.get_goal,
-                None, None
-            )
+    def get_args(self, input_str):
+        if input_str in self.defaults:
+            sublime.status_message('You will provide valid arguments for this'
+                ' restructure. Cancelling...')
+            return
 
-        def get_goal(self, input_str):
-            if input_str in self.defaults:
-                sublime.status_message('You will provide valid pattern for this'
-                    ' restructure. Cancelling...')
-                return
+        self.args.append(str(input_str))
+        self._window.show_input_panel(
+            self.messages[2], self.defaults[2], self.process_args,
+            None, None
+        )
 
-        def get_args(self, input_str):
-            if input_str in self.defaults:
-                sublime.status_message('You will provide valid arguments for this'
-                    ' restructure. Cancelling...')
-                return
+    def process_args(self, input_str):
+        if input_str in self.defaults:
+            sublime.status_message('You will provide valid arguments for this'
+                ' renstructure. Cancelling...')
+            return
 
-            self.args.append(str(input_str))
-            self._window.show_input_panel(
-                self.messages[2], self.defaults[2], self.process_args,
-                None, None
-            )
+        try:
+            self.args.append(ast.literal_eval(input_str))
+        except:
+            sublime.error_message("Malformed string detected in Args.\n\n"
+                "The Args value must be a Python dictionary")
+            return
 
-        def process_args(self, input_str):
-            if input_str in self.defaults:
-                sublime.status_message('You will provide valid arguments for this'
-                    ' renstructure. Cancelling...')
-                return
+        with ropemate.context_for(self.view) as context:
+            self.refactoring = Restructure(
+                context.project, self.args[0], self.args[1], self.args[2])
+
+            self.changes = self.refactoring.get_changes()
 
             try:
-                self.args.append(ast.literal_eval(input_str))
-            except:
-                sublime.error_message("Malformed string detected in Args.\n\n"
-                    "The Args value must be a Python dictionary")
-                return
-
-            with ropemate.context_for(self.view) as context:
-                self.refactoring = Restructure(
-                    context.project, self.args[0], self.args[1], self.args[2])
-
-                self.changes = self.refactoring.get_changes()
-
-                try:
-                    context.project.do(self.changes)
-                    sublime.error_message(self.changes.get_description())
-                except ModuleNotFoundError, e:
-                    sublime.error_message(e)
-
-    def run(self, edit, block=False):
-        thread = PythonRefactorRestructure.RestructureThread(self.view, 5)
-        thread.start()
+                context.project.do(self.changes)
+                sublime.error_message(self.changes.get_description())
+            except ModuleNotFoundError, e:
+                sublime.error_message(e)
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
