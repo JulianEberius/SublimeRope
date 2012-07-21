@@ -162,6 +162,8 @@ class PythonGetDocumentation(sublime_plugin.TextCommand):
         view = self.view
         row, col = view.rowcol(view.sel()[0].a)
         offset = view.text_point(row, col)
+        if view.substr(offset) in [u'(', u')']:
+            offset = view.text_point(row, col - 1)
         with ropemate.context_for(view) as context:
             try:
                 doc = codeassist.get_doc(
