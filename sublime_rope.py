@@ -441,6 +441,12 @@ class PythonRefactorRestructure(sublime_plugin.TextCommand):
                 ' restructure. Cancelling...')
             return
 
+        self.args.append(str(input_str))
+        self._window.show_input_panel(
+            self.messages[1], self.defaults[1], self.get_args,
+            None, None
+        )
+
     def get_args(self, input_str):
         if input_str in self.defaults:
             sublime.status_message('You will provide valid arguments for this'
