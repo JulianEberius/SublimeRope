@@ -1,5 +1,6 @@
 {
     "suppress_word_completions": false,
     "suppress_explicit_completions": false,
-    "use_simple_completion": false
+    "use_simple_completion": true,
+    "autoimport_modules": []
 }

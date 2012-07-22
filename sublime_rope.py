@@ -511,6 +511,36 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
                 window.open_file(path, sublime.ENCODED_POSITION)
 
 
+class PythonGenerateModulesCache(sublime_plugin.TextCommand):
+    '''Generate moduls cache used for auto-import and jump-to-globals.
+    Uses `generate_modules_cache` in a thread in order to build the cache'''
+
+    class GenerateModulesCache(threading.Thread):
+        def __init__(self, ctx, modules):
+            self.ctx = ctx
+            self.modules = modules
+            threading.Thread.__init__(self)
+
+        def run(self):
+            self.ctx.importer.generate_modules_cache(self.modules)
+            self.ctx.__exit__(None, None, None)
+            self.ctx.building = False
+
+    def run(self, edit):
+        settings = sublime.load_settings("SublimeRope.sublime-settings")
+        modules = settings.get('autoimport_modules', [])
+        if modules:
+            sublime.status_message('Generating modules cache ...')
+            ctx = ropemate.context_for(self.view)
+            ctx.building = True
+            ctx.__enter__()
+            thread = PythonGenerateModulesCache.GenerateModulesCache(ctx,
+                                                                    modules)
+            thread.start()
+        else:
+            sublime.error_message("Missing modules in configuration file")
+
+
 class PythonRegenerateCache(sublime_plugin.TextCommand):
     '''Regenerates the cache used for jump-to-globals and auto-imports.
     It is regenerated partially on every save, but sometimes a full regenerate

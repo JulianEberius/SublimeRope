@@ -89,6 +89,17 @@ class RopeContext(object):
             lambda: self.view.erase_status(key),
             0)
 
+    def generate_modules_cache(self, modules):
+        key = "generate_modules_cache_for_" + self.project.address
+        sublime.set_timeout(
+            lambda: self.view.set_status(key, "Building Modules cache ..."),
+            0)
+        self.importer.generate_modules_cache(modules)
+        self.project.sync()
+        sublime.set_timeout(
+            lambda: self.view.erase_status(key),
+            0)
+
     def _create_temp_file(self):
         self.tmpfile = tempfile.NamedTemporaryFile(delete=False)
         text = self.view.substr(sublime.Region(0, self.view.size()))
