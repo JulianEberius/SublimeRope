@@ -39,6 +39,7 @@
         "caption": "Rope Refactoring: Restructure",
         "command": "python_refactor_restructure"
     },
+    {
         "caption": "Rope: Regenerate Project Cache",
         "command": "python_regenerate_cache"
     },
