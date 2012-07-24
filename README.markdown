@@ -13,7 +13,7 @@ Basic Usage
 
 Just unzip / git clone the folder SublimeRope into ST2's Packages folder. Basic completion should work (for more, see below) and all the commands should be reachable through the Command Palette. You can also use [package_control](http://wbond.net/sublime_packages/package_control) to install this plugin.
 
-**IMPORTANT**: For Rope to find all the definitions and offer you the best completion proposals, you need to configure a Rope project.
+*IMPORTANT*: For Rope to find all the definitions and offer you the best completion proposals, you need to configure a Rope project.
 To do so, call the command "Rope: New Project" from the command palette. This will ask you for the
 project root directory and for the root of the virtualenv. Leave the second one empty if you don't use virtualenv.
 
@@ -30,7 +30,16 @@ Available Commands:
 * Jump to Global: Shows a list of project globals in a quickview and allows to jump to them.
 * Import assist: Looks for possible imports from the project starting with the prefix under the cursor. Will automatically insert the "from X import Z" statement.
 
-*Completions types*
+**Global completion**
+
+You can also get completions, auto_import, jump_to_globals, documentation, etc. for modules not under your project root.
+Simply add them to the list of "autoimport_modules" in your SublimeRope.sublime-settings. Then run the
+regenerate_modules_cache command from command palette or using your key bindings. Take care, there is also another command,
+regenerate_cache, which rebuilds the cache just for your project.
+
+*NOTICE*: Non-trivial / nested modules like numpy will have to be added in the form "numpy.*" or Rope will not index them correctly.
+
+**Completions types**
 
 ST2 offers three types of completions:
 
@@ -46,6 +55,11 @@ ST2 offers three types of completions:
  The default settings shows SublimeRope and both word and explicit completions.
 
 SublimeRope provides completion suggestions based on the rope library, but also offers a fall-back method if rope suggest nothing. It is called the "simple_module_completion". Albeit it is sometimes useful, it is disabled by default because some people feel that it slows down the plugin too much. If you want to try it, you can enable it by setting "use_simple_completion" to true in the SublimeRope.sublime_settings file.
+
+**Simple Completion**
+
+This is another, non-Rope-driven, form of completion that can help in some edge cases, but might also slow SublimeRope down. It is disabled by default,
+but you can enable it your SublimeRope.sublime-settings to see if the performance is ok for you.
 
 
 Key Bindings
@@ -105,7 +119,7 @@ SublimeRope provides no default keybindings at the moment, so you need to set th
         ]
     },
     {
-        "keys": ["alt+r", "alt+m"], "command": "python_generate_modules_cache", "context":
+        "keys": ["ctrl+r", "ctrl+m"], "command": "python_generate_modules_cache", "context":
         [
             { "key": "selector", "operator": "equal", "operand": "source.python"}
         ]
@@ -114,6 +128,8 @@ SublimeRope provides no default keybindings at the moment, so you need to set th
 
 Getting all completions to work
 -------------------------------
+
+*NOTICE*: The global module cache (autoimport_modules) mechanism described above as "Global completions" is might be a better way to get all completions to work than the PYTHONPATH-driven one described here.
 
 Basically, anything you want completions for has to be on Rope's python path, which you can extend in <PROJECT_DIR>/.ropeproject/config.py.
 
@@ -128,6 +144,7 @@ Also, if you are not using the same Python as ST2 (e.g. using a custom Python on
 A special case are Django projects, which use global imports and not relative ones, e.g., in views.py they use "import Project.App.models" and not just "import models". In this case, you project has to be on the Python path as well. Add the parent dir of your project:
 
     prefs.add('python_path', '/Users/ebi/my_django_projects')
+
 
 
 Donations
