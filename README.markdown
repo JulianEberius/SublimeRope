@@ -16,6 +16,7 @@ Just unzip / git clone the folder SublimeRope into ST2's Packages folder. Basic 
 *IMPORTANT*: For Rope to find all the definitions and offer you the best completion proposals, you need to configure a Rope project.
 To do so, call the command "Rope: New Project" from the command palette. This will ask you for the
 project root directory and for the root of the virtualenv. Leave the second one empty if you don't use virtualenv.
+You should also setup global module completion, as described below.
 
 Available Commands:
 
@@ -30,7 +31,7 @@ Available Commands:
 * Jump to Global: Shows a list of project globals in a quickview and allows to jump to them.
 * Import assist: Looks for possible imports from the project starting with the prefix under the cursor. Will automatically insert the "from X import Z" statement.
 
-**Global completion**
+**Global completion (Important for getting all completions to work)**
 
 You can also get completions, auto_import, jump_to_globals, documentation, etc. for modules not under your project root.
 Simply add them to the list of "autoimport_modules" in your SublimeRope.sublime-settings. Then run the
