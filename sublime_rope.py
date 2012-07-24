@@ -195,7 +195,6 @@ class PythonGetDocumentation(sublime_plugin.TextCommand):
         out_view.show(0)
         self.view.window().run_command(
             "show_panel", {"panel": "output.rope_python_documentation"})
-        self.view.window().focus_view(out_view)
 
 
 class PythonJumpToGlobal(sublime_plugin.TextCommand):
