@@ -162,6 +162,8 @@ class PythonGetDocumentation(sublime_plugin.TextCommand):
         view = self.view
         row, col = view.rowcol(view.sel()[0].a)
         offset = view.text_point(row, col)
+        if view.substr(offset) in [u'(', u')']:
+            offset = view.text_point(row, col - 1)
         with ropemate.context_for(view) as context:
             try:
                 doc = codeassist.get_doc(
@@ -420,78 +422,67 @@ class PythonRefactorInlineVariable(AbstractPythonRefactoring,
 class PythonRefactorRestructure(sublime_plugin.TextCommand):
     '''Reestruture coincidences'''
 
-    class RestructureThread(threading.Thread):
+    def run(self, edit, block=False):
+        self.messages = ['Pattern', 'Goal', 'Args']
+        self.defaults = ["${}", "${}", "{'': 'name='}"]
+        self.args = []
 
-        def __init__(self, view, timeout):
-            self.view = view
-            self.timeout = timeout
-            threading.Thread.__init__(self)
+        self.view.run_command("save")
+        self.original_loc = self.view.rowcol(self.view.sel()[0].a)
+        self._window = self.view.window()
+        self._window.show_input_panel(
+            self.messages[0], self.defaults[0], self.get_goal,
+            None, None
+        )
 
-        def run(self):
-            self.messages = ['Pattern', 'Goal', 'Args']
-            self.defaults = ["${}", "${}", "{'': 'name='}"]
-            self.args = []
+    def get_goal(self, input_str):
+        if input_str in self.defaults:
+            sublime.status_message('You will provide valid pattern for this'
+                ' restructure. Cancelling...')
+            return
 
-            self.view.run_command("save")
-            self.original_loc = self.view.rowcol(self.view.sel()[0].a)
-            self._window = self.view.window()
-            self._window.show_input_panel(
-                self.messages[0], self.defaults[0], self.get_goal,
-                None, None
-            )
+        self.args.append(str(input_str))
+        self._window.show_input_panel(
+            self.messages[1], self.defaults[1], self.get_args,
+            None, None
+        )
 
-        def get_goal(self, input_str):
-            if input_str in self.defaults:
-                sublime.status_message('You will provide valid pattern for this'
-                    ' restructure. Cancelling...')
-                return
+    def get_args(self, input_str):
+        if input_str in self.defaults:
+            sublime.status_message('You will provide valid arguments for this'
+                ' restructure. Cancelling...')
+            return
 
-            self.args.append(str(input_str))
-            self._window.show_input_panel(
-                self.messages[1], self.defaults[1], self.get_args,
-                None, None
-            )
+        self.args.append(str(input_str))
+        self._window.show_input_panel(
+            self.messages[2], self.defaults[2], self.process_args,
+            None, None
+        )
 
-        def get_args(self, input_str):
-            if input_str in self.defaults:
-                sublime.status_message('You will provide valid arguments for this'
-                    ' renstructure. Cancelling...')
-                return
+    def process_args(self, input_str):
+        if input_str in self.defaults:
+            sublime.status_message('You will provide valid arguments for this'
+                ' renstructure. Cancelling...')
+            return
 
-            self.args.append(str(input_str))
-            self._window.show_input_panel(
-                self.messages[2], self.defaults[2], self.process_args,
-                None, None
-            )
+        try:
+            self.args.append(ast.literal_eval(input_str))
+        except:
+            sublime.error_message("Malformed string detected in Args.\n\n"
+                "The Args value must be a Python dictionary")
+            return
 
-        def process_args(self, input_str):
-            if input_str in self.defaults:
-                sublime.status_message('You will provide valid arguments for this'
-                    ' renstructure. Cancelling...')
-                return
+        with ropemate.context_for(self.view) as context:
+            self.refactoring = Restructure(
+                context.project, self.args[0], self.args[1], self.args[2])
+
+            self.changes = self.refactoring.get_changes()
 
             try:
-                self.args.append(ast.literal_eval(input_str))
-            except:
-                sublime.error_message("Malformed string detected in Args.\n\n"
-                    "The Args value must be a Python dictionary")
-                return
-
-            with ropemate.context_for(self.view) as context:
-                self.refactoring = Restructure(
-                    context.project, self.args[0], self.args[1], self.args[2])
-
-                self.changes = self.refactoring.get_changes()
-
-                try:
-                    context.project.do(self.changes)
-                    sublime.error_message(self.changes.get_description())
-                except ModuleNotFoundError, e:
-                    sublime.error_message(e)
-
-    def run(self, edit, block=False):
-        thread = PythonRefactorRestructure.RestructureThread(self.view, 5)
-        thread.start()
+                context.project.do(self.changes)
+                sublime.error_message(self.changes.get_description())
+            except ModuleNotFoundError, e:
+                sublime.error_message(e)
 
 
 class GotoPythonDefinition(sublime_plugin.TextCommand):
@@ -518,6 +509,36 @@ class GotoPythonDefinition(sublime_plugin.TextCommand):
             elif line is not None:
                 path = self.view.file_name() + ":" + str(line)
                 window.open_file(path, sublime.ENCODED_POSITION)
+
+
+class PythonGenerateModulesCache(sublime_plugin.TextCommand):
+    '''Generate moduls cache used for auto-import and jump-to-globals.
+    Uses `generate_modules_cache` in a thread in order to build the cache'''
+
+    class GenerateModulesCache(threading.Thread):
+        def __init__(self, ctx, modules):
+            self.ctx = ctx
+            self.modules = modules
+            threading.Thread.__init__(self)
+
+        def run(self):
+            self.ctx.importer.generate_modules_cache(self.modules)
+            self.ctx.__exit__(None, None, None)
+            self.ctx.building = False
+
+    def run(self, edit):
+        settings = sublime.load_settings("SublimeRope.sublime-settings")
+        modules = settings.get('autoimport_modules', [])
+        if modules:
+            sublime.status_message('Generating modules cache ...')
+            ctx = ropemate.context_for(self.view)
+            ctx.building = True
+            ctx.__enter__()
+            thread = PythonGenerateModulesCache.GenerateModulesCache(ctx,
+                                                                    modules)
+            thread.start()
+        else:
+            sublime.error_message("Missing modules in configuration file")
 
 
 class PythonRegenerateCache(sublime_plugin.TextCommand):

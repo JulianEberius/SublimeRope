@@ -98,7 +98,18 @@ SublimeRope provides no default keybindings at the moment, so you need to set th
             { "key": "selector", "operator": "equal", "operand": "source.python" }
         ]
     },
-    { "keys": ["ctrl+r", "ctrl+f"], "command": "python_refactor_restructure" }
+    {
+        "keys": ["ctrl+r", "ctrl+f"], "command": "python_refactor_restructure", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python"}
+        ]
+    },
+    {
+        "keys": ["alt+r", "alt+m"], "command": "python_generate_modules_cache", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python"}
+        ]
+    }
 
 
 Getting all completions to work
