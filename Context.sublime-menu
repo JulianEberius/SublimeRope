@@ -1,0 +1,13 @@
+[
+    { "command": "python_get_documentation", "caption": "Rope: Get Documentation" },
+    { "command": "goto_python_definition", "caption": "Rope: Go to Definition"},
+    {
+        "id": "refactoring",
+        "caption": "Refactoring",
+        "children": [
+            { "command": "python_auto_import", "caption": "Rope: Auto Import" },
+            { "command": "python_refactor_rename", "caption": "Rope: Rename" },
+            { "command": "python_refactor_extract_method", "caption": "Rope: Extract Method" }
+        ]
+    }
+]
