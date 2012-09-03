@@ -4,15 +4,20 @@ import sys
 from rope.base import utils
 
 
+std_lib_path = None
+
 def _stdlib_path():
-    try:
-        import distutils.sysconfig
-        return distutils.sysconfig.get_python_lib(standard_lib=True)
-    except ImportError:
-        # original code from older versions of rope is used when
-        # distutil is not installed
-        import inspect
-        return os.path.dirname(inspect.getsourcefile(inspect))
+    if not std_lib_path:
+        global std_lib_path
+        try:
+            import distutils.sysconfig
+            std_lib_path = distutils.sysconfig.get_python_lib(standard_lib=True)
+        except (IOError, ImportError):
+            # original code from older versions of rope is used when
+            # distutil is not installed
+            import inspect
+            std_lib_path = os.path.dirname(inspect.getsourcefile(inspect))
+    return std_lib_path
 
 @utils.cached(1)
 def standard_modules():
