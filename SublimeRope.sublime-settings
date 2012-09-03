@@ -4,5 +4,19 @@
     "use_simple_completion": false,
     "add_parameter_snippet": true,
     // non-trivial / nested modules have to be added with ".*", e.g. "numpy.*"
+    // You can specify "autoimport_modules" in your project settings as project
+    // specific opions. Navigate to Project->Edit Project and add your modules
+    // there the `settings` section. If settings section doesn's exists just
+    // create it:
+    //      "settings":
+    //      {
+    //          "rope_autoimport_modules":
+    //          [
+    //              "twisted.*",
+    //              "numpy.*",
+    //              "libsaas.*"
+    //              ...
+    //          ]
+    //      }
     "autoimport_modules": []
 }

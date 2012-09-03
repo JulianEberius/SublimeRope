@@ -38,6 +38,19 @@ Simply add them to the list of "autoimport_modules" in your SublimeRope.sublime-
 regenerate_modules_cache command from command palette or using your key bindings. Take care, there is also another command,
 regenerate_cache, which rebuilds the cache just for your project.
 
+You can specify "autoimport_modules" in your project settings as project specific opions. Navigate to Project->Edit Project and add your modules there in the `settings` section. If settings section doesn's exists just create it:
+
+    "settings":
+    {
+        "rope_autoimport_modules":
+        [
+            "twisted.*",
+            "numpy.*",
+            "libsaas.*"
+            ...
+        ]
+    }
+
 *NOTICE*: Non-trivial / nested modules like numpy will have to be added in the form "numpy.*" or Rope will not index them correctly.
 
 **Completions types**

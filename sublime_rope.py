@@ -32,6 +32,15 @@ class PythonEventListener(sublime_plugin.EventListener):
             context.importer.generate_cache(
                 resources=[context.resource])
 
+def get_setting(key, default_value=None):
+    try:
+        settings = sublime.active_window().active_view().settings()
+        if settings.has('rope_{0}'.format(key)):
+            return settings.get('rope_{0}'.format(key))
+    except:
+        pass
+    s = sublime.load_settings('SublimeRope.sublime-settings')
+    return s.get(key, default_value)
 
 class PythonCompletions(sublime_plugin.EventListener):
     ''''Provides rope completions for the ST2 completion system.'''
@@ -219,7 +228,6 @@ class PythonGetDocumentation(sublime_plugin.TextCommand):
         out_view.show(0)
         self.view.window().run_command(
             "show_panel", {"panel": "output.rope_python_documentation"})
-        self.view.window().focus_view(out_view)
 
 
 class PythonJumpToGlobal(sublime_plugin.TextCommand):
@@ -551,10 +559,11 @@ class PythonGenerateModulesCache(sublime_plugin.TextCommand):
             self.ctx.building = False
 
     def run(self, edit):
-        settings = sublime.load_settings("SublimeRope.sublime-settings")
-        modules = settings.get('autoimport_modules', [])
+        modules = get_setting('autoimport_modules', [])
         if modules:
-            sublime.status_message('Generating modules cache ...')
+            sublime.status_message('Generating modules cache {0}...'.format(
+                ' '.join(modules)
+            ))
             ctx = ropemate.context_for(self.view)
             ctx.building = True
             ctx.__enter__()
