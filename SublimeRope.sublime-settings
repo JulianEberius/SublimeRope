@@ -2,6 +2,7 @@
     "suppress_word_completions": false,
     "suppress_explicit_completions": false,
     "use_simple_completion": false,
+    "add_parameter_snippet": true,
     // non-trivial / nested modules have to be added with ".*", e.g. "numpy.*"
     "autoimport_modules": []
 }

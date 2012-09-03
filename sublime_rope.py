@@ -33,12 +33,6 @@ class PythonEventListener(sublime_plugin.EventListener):
                 resources=[context.resource])
 
 
-def proposal_string(proposal):
-    result = str(proposal).split(' ')
-    result = '%s\t%s' % (result[0], ' '.join(result[1:]))
-    return result
-
-
 class PythonCompletions(sublime_plugin.EventListener):
     ''''Provides rope completions for the ST2 completion system.'''
     def __init__(self):
@@ -46,6 +40,7 @@ class PythonCompletions(sublime_plugin.EventListener):
         s.add_on_change("suppress_word_completions", self.load_settings)
         s.add_on_change("suppress_explicit_completions", self.load_settings)
         s.add_on_change("use_simple_completion", self.load_settings)
+        s.add_on_change("add_parameter_snippet", self.load_settings)
         self.load_settings(s)
 
     def load_settings(self, settings=None):
@@ -57,6 +52,34 @@ class PythonCompletions(sublime_plugin.EventListener):
             "suppress_explicit_completions")
         self.use_simple_completion = settings.get(
             "use_simple_completion")
+        self.add_parameter_snippet = settings.get(
+            "add_parameter_snippet")
+
+    def proposal_string(self, p):
+        if p.parameters:
+            params = [par for par in p.parameters if par != "self"]
+            result = p.name + "("
+            result += ", ".join(param for param in params)
+            result += ")"
+        else:
+            result = p.name
+        result += "\t(%s, %s)" % (p.scope, p.type)
+        return result
+
+    def insert_string(self, p):
+        if p.parameters and not p.from_X_import:
+            params = [par for par in p.parameters if par != "self"]
+            result = p.name + "("
+            if self.add_parameter_snippet:
+                result += ", ".join("${%i:%s}" % (idx+1, param) for idx, param in enumerate(params)) + ")"
+            else:
+                if len(params) == 0:
+                    result += ")"
+                else:
+                    result += "$1)"
+        else:
+            result = p.name
+        return result
 
     def on_query_completions(self, view, prefix, locations):
         if not view.match_selector(locations[0], "source.python"):
@@ -79,8 +102,9 @@ class PythonCompletions(sublime_plugin.EventListener):
                 raw_proposals = self.simple_module_completion(view, identifier)
 
         proposals = codeassist.sorted_proposals(raw_proposals)
+
         proposals = [
-            (proposal_string(p), p.name)
+            (self.proposal_string(p), self.insert_string(p))
             for p in proposals if p.name != 'self='
         ]
 
@@ -437,7 +461,7 @@ class PythonRefactorRestructure(sublime_plugin.TextCommand):
 
     def get_goal(self, input_str):
         if input_str in self.defaults:
-            sublime.status_message('You will provide valid pattern for this'
+            sublime.status_message('You have to provide a valid pattern for this'
                 ' restructure. Cancelling...')
             return
 
@@ -449,7 +473,7 @@ class PythonRefactorRestructure(sublime_plugin.TextCommand):
 
     def get_args(self, input_str):
         if input_str in self.defaults:
-            sublime.status_message('You will provide valid arguments for this'
+            sublime.status_message('You have to provide valid arguments for this'
                 ' restructure. Cancelling...')
             return
 
@@ -461,8 +485,8 @@ class PythonRefactorRestructure(sublime_plugin.TextCommand):
 
     def process_args(self, input_str):
         if input_str in self.defaults:
-            sublime.status_message('You will provide valid arguments for this'
-                ' renstructure. Cancelling...')
+            sublime.status_message('You have to provide valid arguments for this'
+                ' restructure. Cancelling...')
             return
 
         try:

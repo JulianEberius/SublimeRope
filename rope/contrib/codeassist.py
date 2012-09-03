@@ -151,10 +151,11 @@ class CompletionProposal(object):
 
     """
 
-    def __init__(self, name, scope, pyname=None):
+    def __init__(self, name, scope, pyname=None, from_X_import=False):
         self.name = name
         self.pyname = pyname
         self.scope = self._get_scope(scope)
+        self.from_X_import = from_X_import
 
     def __str__(self):
         return '%s (%s, %s)' % (self.name, self.scope, self.type)
@@ -368,7 +369,7 @@ class _PythonCodeAssist(object):
         for name in pymodule:
             if name.startswith(self.starting):
                 result[name] = CompletionProposal(name, scope='global',
-                                                  pyname=pymodule[name])
+                                                  pyname=pymodule[name], from_X_import=True)
         return result
 
     def _find_module(self, pymodule, module_name):
