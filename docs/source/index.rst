@@ -9,10 +9,11 @@ SublimeRope Documentation
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    getting_started.rst
    auto_completion.rst
+   cache_mechanisms.rst
    auto_import.rst
    globals_jump.rst
    show_documentation.rst
