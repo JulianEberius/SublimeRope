@@ -1,11 +1,11 @@
-.. _getting_started.rst;
+.. _getting_started:
 
 
 ***************
 Getting started
 ***************
 
-Ready to get started? This page gives you a basic introduction to SublimeRope. For more detailed information about Global Module completions go to :doc:`auto_completion` page. For information about refectoring go to :doc:`refactoring` page.
+Ready to get started? This page gives you a basic introduction to SublimeRope. If you're looking for detailed information about auto completions go to :ref:`auto_completion` page. For information about refectoring go to :ref:`refactoring` page.
 
 .. _whats-sublimerope:
 
@@ -68,6 +68,6 @@ Sublime Rope is distributed under the Free Software Foundation General Public Li
 
 Have a look at `LICENSE.txt <https://github.com/JulianEberius/SublimeRope/blob/master/LICENSE.txt>`_ file for more information.
 
-EXTERNAL LICENSES
------------------
-This project uses code from other open source projects (Rope) which may include licenses of their own.
+.. note::
+
+    This project uses code from other open source projects (Rope) which may include licenses of their own.

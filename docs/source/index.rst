@@ -3,21 +3,24 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to SublimeRope's documentation!
-=======================================
+SublimeRope Documentation
+=========================
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
-   _getting_started.rst
+   getting_started.rst
+   auto_completion.rst
+   auto_import.rst
+   globals_jump.rst
+   show_documentation.rst
+   refactoring.rst
 
 
 Indices and tables
 ==================
-
-* :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
 
