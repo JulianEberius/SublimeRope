@@ -6,7 +6,7 @@ Auto Import
 
 SublimeRope offers auto importing features through Rope library. It looks for possible imports from the project starting with the prefix under the cursor.
 
-In order to use auto import you should look for ``Rope: Import Assist`` in the Control Palette or just add a shortcut in your configuration. We provide a serie of possible :ref:`shortcuts` in this Documentation as well.
+In order to use auto import you should look for ``Rope: Import Assist`` in the Control Palette or just add a shortcut in your configuration. We provide a serie of possible :ref:`key_bindings` in this Documentation as well.
 
 Future Plans
 ============

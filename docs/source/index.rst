@@ -18,6 +18,7 @@ Contents:
    globals_jump.rst
    show_documentation.rst
    refactoring.rst
+   key_bindings.rst
 
 
 Indices and tables

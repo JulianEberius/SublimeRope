@@ -47,8 +47,8 @@ Some notes
 
 SublimeRope is a Free Software project developed and maintained by Julian Eberius and a few collaborators in their free time. To review a full list of SublimeRope developers just look at the project's `GitHub Page <https://github.com/JulianEberius/SublimeRope>`_.
 
-License:
-________
+License
+_______
 
 Sublime Rope is distributed under the Free Software Foundation General Public License terms::
 
