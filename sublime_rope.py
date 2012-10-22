@@ -23,15 +23,6 @@ from rope.base.taskhandle import TaskHandle
 from rope.base.pycore import ModuleNotFoundError
 
 
-class PythonEventListener(sublime_plugin.EventListener):
-    '''Updates Rope's database in response to events (e.g. post_save)'''
-    def on_post_save(self, view):
-        if not "Python" in view.settings().get('syntax'):
-            return
-        with ropemate.context_for(view) as context:
-            context.importer.generate_cache(
-                resources=[context.resource])
-
 def get_setting(key, default_value=None):
     try:
         settings = sublime.active_window().active_view().settings()
@@ -42,6 +33,68 @@ def get_setting(key, default_value=None):
     s = sublime.load_settings('SublimeRope.sublime-settings')
     return s.get(key, default_value)
 
+
+if get_setting('use_autoimport_improvements'):
+    try:
+        import pyflakes.checker as pyflakes
+    except ImportError:
+        # use our bundled version
+        import rope_pyflakes.checker as pyflakes
+
+
+class Checker:
+    '''PyFlakes Checker'''
+
+    def pyflakes_check(self, view, code, filename):
+        errors = []
+
+        if get_setting('use_autoimport_improvements'):
+            try:
+                tree = compile(code, filename, "exec", ast.PyCF_ONLY_AST)
+            except (SyntaxError, IndentationError), value:
+                msg = value.args[0]
+                text = value.text
+
+                if text is None:
+                    return pericote
+
+            errors.extend(blah)
+
+
+class BackgroundPyFlakesListener(sublime_plugin.EventListener):
+    '''Check for changes on file to perform auto import operations'''
+
+    def __init__(self, view):
+        if not 'Python' in view.settings().get('syntax'):
+            return
+        super(BackgroundPyFlakesListener, self).__init__()
+        self.use_autoimport_improvements = get_setting(
+                                                'use_autoimport_improvements')
+
+    def on_modified(self, view):
+        '''PyFlakes works with files so we don't spend our time here'''
+
+        return
+
+    def on_load(self, view):
+        '''We check the file syntax on load'''
+
+        if view.is_scratch():
+            return
+
+        # Check file here
+
+
+class PythonEventListener(sublime_plugin.EventListener):
+    '''Updates Rope's database in response to events (e.g. post_save)'''
+    def on_post_save(self, view):
+        if not "Python" in view.settings().get('syntax'):
+            return
+        with ropemate.context_for(view) as context:
+            context.importer.generate_cache(
+                resources=[context.resource])
+
+
 class PythonCompletions(sublime_plugin.EventListener):
     ''''Provides rope completions for the ST2 completion system.'''
     def __init__(self):
@@ -50,6 +103,7 @@ class PythonCompletions(sublime_plugin.EventListener):
         s.add_on_change("suppress_explicit_completions", self.load_settings)
         s.add_on_change("use_simple_completion", self.load_settings)
         s.add_on_change("add_parameter_snippet", self.load_settings)
+        s.add_on_change("use_autoimport_improvements", self.load_settings)
         self.load_settings(s)
 
     def load_settings(self, settings=None):
@@ -63,6 +117,8 @@ class PythonCompletions(sublime_plugin.EventListener):
             "use_simple_completion")
         self.add_parameter_snippet = settings.get(
             "add_parameter_snippet")
+        self.use_autoimport_improvements = settings.get(
+            "use_autoimport_improvements")
 
     def proposal_string(self, p):
         if p.parameters:
@@ -80,7 +136,10 @@ class PythonCompletions(sublime_plugin.EventListener):
             params = [par for par in p.parameters if par != "self"]
             result = p.name + "("
             if self.add_parameter_snippet:
-                result += ", ".join("${%i:%s}" % (idx+1, param) for idx, param in enumerate(params)) + ")"
+                result += ", ".join(
+                    "${%i:%s}" %
+                    (idx + 1, param) for idx, param in enumerate(params)
+                ) + ")"
             else:
                 if len(params) == 0:
                     result += ")"
@@ -281,7 +340,9 @@ class PythonAutoImport(sublime_plugin.TextCommand):
         self.offset = view.text_point(row, col)
         with ropemate.context_for(view) as context:
             word = self.view.substr(self.view.word(self.offset))
+            print word
             self.candidates = list(context.importer.import_assist(word))
+            print self.candidates
             self.view.window().show_quick_panel(
                 map(lambda c: [c[0], c[1]], self.candidates),
                 self.on_select_global, sublime.MONOSPACE_FONT)
