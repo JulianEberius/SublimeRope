@@ -51,14 +51,12 @@ class Checker:
         if get_setting('use_autoimport_improvements'):
             try:
                 tree = compile(code, filename, "exec", ast.PyCF_ONLY_AST)
-            except (SyntaxError, IndentationError), value:
-                msg = value.args[0]
-                text = value.text
+            except (SyntaxError, IndentationError, ValueError):
+                pass
+            else:
+                errors.extend(pyflakes.Checker(tree, filename))
 
-                if text is None:
-                    return pericote
-
-            errors.extend(blah)
+        return errors
 
 
 class BackgroundPyFlakesListener(sublime_plugin.EventListener):
