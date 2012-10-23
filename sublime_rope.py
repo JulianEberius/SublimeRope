@@ -48,26 +48,42 @@ class Checker:
     def pyflakes_check(self, view, code, filename):
         errors = []
 
+        # Check if the view is still a valid view
+        valid_view = False
+        view_id = view.id()
+
+        for window in sublime.windows():
+            for v in window.views():
+                if v.id() == view_id:
+                    valid_view = True
+                    break
+
+        if (not valid_view or view.is_loading()
+                            or view.file_name().encode('utf-8') != filename):
+            return errors
+
         if get_setting('use_autoimport_improvements'):
             try:
                 tree = compile(code, filename, "exec", ast.PyCF_ONLY_AST)
             except (SyntaxError, IndentationError, ValueError):
                 pass
             else:
-                errors.extend(pyflakes.Checker(tree, filename))
+                errors.extend(pyflakes.Checker(tree, filename).messages)
 
-        return errors
+        for error in errors:
+            if isinstance(error, pyflakes.messages.UndefinedName):
+                importer = PyFlakesAutoImport()
+                importer.auto_import(view, error.message_args[0])
 
 
 class BackgroundPyFlakesListener(sublime_plugin.EventListener):
     '''Check for changes on file to perform auto import operations'''
 
-    def __init__(self, view):
-        if not 'Python' in view.settings().get('syntax'):
-            return
+    def __init__(self):
         super(BackgroundPyFlakesListener, self).__init__()
         self.use_autoimport_improvements = get_setting(
                                                 'use_autoimport_improvements')
+        self.checker = Checker()
 
     def on_modified(self, view):
         '''PyFlakes works with files so we don't spend our time here'''
@@ -77,10 +93,26 @@ class BackgroundPyFlakesListener(sublime_plugin.EventListener):
     def on_load(self, view):
         '''We check the file syntax on load'''
 
+        if not 'Python' in view.settings().get('syntax'):
+            return
+
         if view.is_scratch():
             return
 
-        # Check file here
+        self._check(view)
+
+    def on_post_save(self, view):
+        if view.is_scratch():
+            return
+
+        self._check(view)
+
+    def _check(self, view):
+        self.checker.pyflakes_check(
+            view,
+            view.substr(sublime.Region(0, view.size())),
+            view.file_name().encode('utf-8')
+        )
 
 
 class PythonEventListener(sublime_plugin.EventListener):
@@ -329,29 +361,26 @@ class PythonJumpToGlobal(sublime_plugin.TextCommand):
             )
 
 
-class PythonAutoImport(sublime_plugin.TextCommand):
-    """Provides a list of project globals starting with the
-    word under the cursor"""
-    def run(self, edit):
-        view = self.view
-        row, col = view.rowcol(view.sel()[0].a)
-        self.offset = view.text_point(row, col)
-        with ropemate.context_for(view) as context:
-            word = self.view.substr(self.view.word(self.offset))
-            print word
-            self.candidates = list(context.importer.import_assist(word))
-            print self.candidates
-            self.view.window().show_quick_panel(
-                map(lambda c: [c[0], c[1]], self.candidates),
-                self.on_select_global, sublime.MONOSPACE_FONT)
+class BaseAutoImport:
+    """Provides a base for auto imports in SublimeRope"""
 
-    def on_select_global(self, choice):
+    def _show_candidates(self, view):
+        self.view = view
+        if 'offset' not in self.__dict__:
+            row, col = view.rowcol(view.sel()[0].a)
+            self.offset = view.text_point(row, col)
+
+        self.view.window().show_quick_panel(
+            map(lambda c: [c[0], c[1]], self.candidates),
+            self._on_select_global, sublime.MONOSPACE_FONT
+        )
+
+    def _on_select_global(self, choice):
         if choice is not -1:
             name, module = self.candidates[choice]
             with ropemate.context_for(self.view) as context:
                 # check whether adding an import is necessary, and where
-                all_lines = self.view.lines(
-                    sublime.Region(0, self.view.size())
+                all_lines = self.view.lines(sublime.Region(0, self.view.size())
                 )
                 line_no = context.importer.find_insertion_line(context.input)
                 insert_import_str = "from %s import %s\n" % (module, name)
@@ -371,6 +400,28 @@ class PythonAutoImport(sublime_plugin.TextCommand):
                     self.view.insert(
                         e, insert_import_point, insert_import_str)
                 self.view.end_edit(e)
+
+
+class PyFlakesAutoImport(BaseAutoImport):
+    """Provides a list of project globals starting the PyFlakes error check
+    returning value"""
+
+    def auto_import(self, view, word):
+        with ropemate.context_for(view) as context:
+            self.candidates = list(context.importer.import_assist(word))
+            self._show_candidates(view)
+
+
+class PythonAutoImport(sublime_plugin.TextCommand, BaseAutoImport):
+    """Provides a list of project globals starting with the
+    word under the cursor"""
+    def run(self, edit):
+        row, col = self.view.rowcol(self.view.sel()[0].a)
+        self.offset = self.view.text_point(row, col)
+        with ropemate.context_for(self.view) as context:
+            word = self.view.substr(self.view.word(self.offset))
+            self.candidates = list(context.importer.import_assist(word))
+            self._show_candidates(self.view)
 
 
 class AbstractPythonRefactoring(object):
