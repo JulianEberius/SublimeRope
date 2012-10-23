@@ -8,6 +8,13 @@ SublimeRope offers auto importing features through Rope library. It looks for po
 
 In order to use auto import you should look for ``Rope: Import Assist`` in the Control Palette or just add a shortcut in your configuration. We provide a serie of possible :ref:`key_bindings` in this Documentation as well.
 
+Auto Import Improvements
+========================
+
+When Auto Import Improvements are enabled all the undefined
+
+You can enable Auto Import Improvements in your SublimeRope's settings file just setting the ``use_autoimport_improvements`` to true if you feels that its not slowing down your ST2.
+
 Future Plans
 ============
 

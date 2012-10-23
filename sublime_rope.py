@@ -72,8 +72,8 @@ class Checker:
 
         for error in errors:
             if isinstance(error, pyflakes.messages.UndefinedName):
-                importer = PyFlakesAutoImport()
-                importer.auto_import(view, error.message_args[0])
+                AutoImport(view, error.message_args[0]).start()
+                break
 
 
 class BackgroundPyFlakesListener(sublime_plugin.EventListener):
@@ -361,19 +361,35 @@ class PythonJumpToGlobal(sublime_plugin.TextCommand):
             )
 
 
-class BaseAutoImport:
+class AutoImport(threading.Thread):
     """Provides a base for auto imports in SublimeRope"""
 
-    def _show_candidates(self, view):
+    def __init__(self, view, word=None):
         self.view = view
-        if 'offset' not in self.__dict__:
-            row, col = view.rowcol(view.sel()[0].a)
-            self.offset = view.text_point(row, col)
 
-        self.view.window().show_quick_panel(
-            map(lambda c: [c[0], c[1]], self.candidates),
-            self._on_select_global, sublime.MONOSPACE_FONT
-        )
+        if word is not None:
+            self.word = word
+        else:
+            row, col = self.view.rowcol(view.sel()[0].a)
+            offset = self.view.text_point(row, col)
+            self.word = self.view.substr(self.view.word(offset))
+
+        threading.Thread.__init__(self)
+
+    def run(self):
+        """
+        Starts the thread
+        """
+
+        def show_quick_pane():
+            self.view.window().show_quick_panel(
+                map(lambda c: [c[0], c[1]], self.candidates),
+                self._on_select_global, sublime.MONOSPACE_FONT
+            )
+
+        with ropemate.context_for(self.view) as context:
+            self.candidates = list(context.importer.import_assist(self.word))
+            sublime.set_timeout(show_quick_pane, 0)
 
     def _on_select_global(self, choice):
         if choice is not -1:
@@ -386,42 +402,21 @@ class BaseAutoImport:
                 insert_import_str = "from %s import %s\n" % (module, name)
                 existing_imports_str = self.view.substr(
                     sublime.Region(all_lines[0].a, all_lines[line_no - 1].b))
-                do_insert_import = \
-                    insert_import_str not in existing_imports_str
+
+                if insert_import_str.rstrip() in existing_imports_str:
+                    return
+
                 insert_import_point = all_lines[line_no].a
-
-                # the word prefix that is replaced
-                original_word = self.view.word(self.offset)
-
-                # replace the prefix, add the import if necessary
                 e = self.view.begin_edit()
-                self.view.replace(e, original_word, name)
-                if do_insert_import:
-                    self.view.insert(
-                        e, insert_import_point, insert_import_str)
+                self.view.insert(e, insert_import_point, insert_import_str)
                 self.view.end_edit(e)
 
 
-class PyFlakesAutoImport(BaseAutoImport):
-    """Provides a list of project globals starting the PyFlakes error check
-    returning value"""
-
-    def auto_import(self, view, word):
-        with ropemate.context_for(view) as context:
-            self.candidates = list(context.importer.import_assist(word))
-            self._show_candidates(view)
-
-
-class PythonAutoImport(sublime_plugin.TextCommand, BaseAutoImport):
+class PythonAutoImport(sublime_plugin.TextCommand):
     """Provides a list of project globals starting with the
     word under the cursor"""
     def run(self, edit):
-        row, col = self.view.rowcol(self.view.sel()[0].a)
-        self.offset = self.view.text_point(row, col)
-        with ropemate.context_for(self.view) as context:
-            word = self.view.substr(self.view.word(self.offset))
-            self.candidates = list(context.importer.import_assist(word))
-            self._show_candidates(self.view)
+        AutoImport(self.view).start()
 
 
 class AbstractPythonRefactoring(object):
