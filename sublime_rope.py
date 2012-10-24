@@ -6,6 +6,7 @@ import os
 import glob
 import re
 import ast
+import itertools
 
 # always import the bundled rope
 SUBLIME_ROPE_PATH = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
@@ -22,6 +23,12 @@ from rope.base.exceptions import ModuleSyntaxError
 from rope.base.taskhandle import TaskHandle
 from rope.base.pycore import ModuleNotFoundError
 
+try:
+    import pyflakes.checker as pyflakes
+except ImportError:
+    # use our bundled version
+    import rope_pyflakes.checker as pyflakes
+
 
 def get_setting(key, default_value=None):
     try:
@@ -34,85 +41,136 @@ def get_setting(key, default_value=None):
     return s.get(key, default_value)
 
 
-if get_setting('use_autoimport_improvements'):
-    try:
-        import pyflakes.checker as pyflakes
-    except ImportError:
-        # use our bundled version
-        import rope_pyflakes.checker as pyflakes
+# Global Variable for storing errors found by PyFlask
+ERRORS_BY_LINE = {}
 
 
-class Checker:
+class PyFlakesChecker(threading.Thread):
     '''PyFlakes Checker'''
+    drawType = 4 | 32
 
-    def pyflakes_check(self, view, code, filename):
+    def __init__(self, view, code, filename):
+        threading.Thread.__init__(self)
+        self.view = view
+        self.code = code
+        self.filename = filename
+        self.view_id = self.view.id()
+
+    def run(self):
         errors = []
 
-        # Check if the view is still a valid view
-        valid_view = False
-        view_id = view.id()
+        try:
+            tree = compile(self.code, self.filename, "exec", ast.PyCF_ONLY_AST)
+        except (SyntaxError, IndentationError, ValueError), e:
+            self.syntax_error = e
+            sublime.set_timeout(self.handle_syntax_error, 0)
+            return
+        else:
+            errors.extend(pyflakes.Checker(tree, self.filename).messages)
 
-        for window in sublime.windows():
-            for v in window.views():
-                if v.id() == view_id:
-                    valid_view = True
-                    break
+        by_line = lambda e: e.lineno
+        errors = sorted(errors, key=by_line)
+        errors_by_line = {}
+        for k,g in itertools.groupby(errors, by_line):
+            errors_by_line[k] = list(g)
+        self.errors = errors
+        ERRORS_BY_LINE[self.view_id] = errors_by_line
+        sublime.set_timeout(self.on_validation_finished, 0)
 
-        if (not valid_view or view.is_loading()
-                            or view.file_name().encode('utf-8') != filename):
-            return errors
-
-        if get_setting('use_autoimport_improvements'):
-            try:
-                tree = compile(code, filename, "exec", ast.PyCF_ONLY_AST)
-            except (SyntaxError, IndentationError, ValueError):
-                pass
-            else:
-                errors.extend(pyflakes.Checker(tree, filename).messages)
-
-        for error in errors:
-            if isinstance(error, pyflakes.messages.UndefinedName):
-                AutoImport(view, error.message_args[0]).start()
+    def on_validation_finished(self):
+        self.visualize_errors()
+        for error in self.errors:
+            if isinstance(error, pyflakes.messages.UndefinedName) and\
+                    get_setting('use_autoimport_improvements'):
+                AutoImport(self.view, error.message_args[0]).start()
                 break
 
+    def handle_syntax_error(self):
+        e = self.syntax_error
+        msg = e.args[0]
+        (lineno, offset, text) = e.lineno, e.offset, e.text
 
-class BackgroundPyFlakesListener(sublime_plugin.EventListener):
+        if text is None:
+            print >> sys.stderr, "SublimeRope problem decoding source file %s" % (
+                self.filename, )
+        else:
+            line = text.splitlines()[-1]
+            if offset is not None:
+                offset = offset - (len(text) - len(line))
+
+            self.view.erase_regions('sublimerope-errors')
+            if offset is not None:
+                text_point = self.view.text_point(lineno - 1, 0) + offset
+                self.view.add_regions(
+                    'sublimerope-errors', [sublime.Region(text_point, text_point + 1)],
+                    'keyword', 'dot', PyFlakesChecker.drawType)
+            else:
+                self.view.add_regions(
+                    'sublimerope-errors', [self.view.line(self.view.text_point(lineno - 1, 0))],
+                    'keyword', 'dot', PyFlakesChecker.drawType)
+            self.view.erase_status('sublimerope-errors')
+            self.view.set_status('sublimerope-errors', msg)
+
+
+    def visualize_errors(self):
+        self.view.erase_regions('sublimerope-errors')
+        errors_by_line = ERRORS_BY_LINE[self.view.id()]
+
+        outlines = [self.view.line(self.view.text_point(lineno - 1, 0))
+                    for lineno in errors_by_line.keys()]
+
+        self.view.add_regions(
+            'sublimerope-errors', outlines, 'keyword', 'dot',
+            PyFlakesChecker.drawType)
+
+class PyFlakesListener(sublime_plugin.EventListener):
     '''Check for changes on file to perform auto import operations'''
 
     def __init__(self):
-        super(BackgroundPyFlakesListener, self).__init__()
+        super(PyFlakesListener, self).__init__()
         self.use_autoimport_improvements = get_setting(
                                                 'use_autoimport_improvements')
-        self.checker = Checker()
-
-    def on_modified(self, view):
-        '''PyFlakes works with files so we don't spend our time here'''
-
-        return
 
     def on_load(self, view):
         '''We check the file syntax on load'''
-
         if not 'Python' in view.settings().get('syntax'):
             return
-
         if view.is_scratch():
             return
-
         self._check(view)
 
     def on_post_save(self, view):
+        if not 'Python' in view.settings().get('syntax'):
+            return
         if view.is_scratch():
             return
-
         self._check(view)
 
+    def on_selection_modified(self, view):
+        if not 'Python' in view.settings().get('syntax'):
+            return
+        vid = view.id()
+        errors_by_line = ERRORS_BY_LINE.get(vid, None)
+        if not errors_by_line:
+            view.erase_status('sublimerope-errors')
+            return
+        lineno = view.rowcol(view.sel()[0].end())[0] + 1
+        if lineno in errors_by_line.keys():
+            view.set_status('sublimerope-errors', '; '.join(
+                    [m.message % m.message_args for m in errors_by_line[lineno]]))
+        else:
+            view.erase_status('sublimerope-errors')
+
     def _check(self, view):
-        self.checker.pyflakes_check(
+        if not (get_setting('use_autoimport_improvements') or\
+                get_setting("pyflakes_linting")):
+            return
+
+        PyFlakesChecker(
             view,
             view.substr(sublime.Region(0, view.size())),
             view.file_name().encode('utf-8')
-        )
+        ).start()
 
 
 class PythonEventListener(sublime_plugin.EventListener):
@@ -387,10 +445,11 @@ class AutoImport(threading.Thread):
         """
 
         def show_quick_pane():
-            self.view.window().show_quick_panel(
-                [[c[0], c[1]] for c in self.candidates],
-                self._on_select_global, sublime.MONOSPACE_FONT
-            )
+            if self.view.window():
+                self.view.window().show_quick_panel(
+                    [[c[0], c[1]] for c in self.candidates],
+                    self._on_select_global, sublime.MONOSPACE_FONT
+                )
 
         self.candidates = list(self.ctx.importer.import_assist(self.word))
         self.ctx.__exit__(None, None, None)

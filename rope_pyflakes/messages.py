@@ -8,7 +8,8 @@ class Message(object):
         self.lineno = lineno
     def __str__(self):
         return '%s:%s: %s' % (self.filename, self.lineno, self.message % self.message_args)
-
+    def msg(self):
+        return self.message % self.message_args
 
 class UnusedImport(Message):
     message = '%r imported but unused'
@@ -80,7 +81,6 @@ class LateFutureImport(Message):
     def __init__(self, filename, lineno, names):
         Message.__init__(self, filename, lineno)
         self.message_args = (names,)
-
 
 class UnusedVariable(Message):
     """

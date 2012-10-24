@@ -19,5 +19,6 @@
     //              ...
     //          ]
     //      }
-    "autoimport_modules": []
+    "autoimport_modules": [],
+    "pyflakes_linting": true
 }
