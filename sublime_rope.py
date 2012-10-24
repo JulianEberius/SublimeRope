@@ -8,8 +8,8 @@ import re
 import ast
 
 # always import the bundled rope
-path = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
-sys.path.insert(0, path)
+SUBLIME_ROPE_PATH = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
+sys.path.insert(0, SUBLIME_ROPE_PATH)
 
 import rope
 import ropemate
@@ -252,7 +252,7 @@ class PythonCompletions(sublime_plugin.EventListener):
             if directory_completions:
                 result.extend(directory_completions)
         except Exception, e:
-            print e
+            print "Exception in SimpleModuleCompletion:", e
             return []
 
         finally:
@@ -322,6 +322,7 @@ class PythonGetDocumentation(sublime_plugin.TextCommand):
 class PythonJumpToGlobal(sublime_plugin.TextCommand):
     """Allows the user to select from a list of all known globals
     in a quick panel to jump there."""
+
     def run(self, edit):
         with ropemate.context_for(self.view) as context:
             self.names = list(context.importer.get_all_names())
@@ -337,7 +338,7 @@ class PythonJumpToGlobal(sublime_plugin.TextCommand):
             selected_global = self.names[choice]
             with ropemate.context_for(self.view) as context:
                 self.locs = context.importer.get_name_locations(selected_global)
-                self.locs = map(loc_to_str, self.locs)
+                self.locs = [loc_to_str(l) for l in self.locs]
 
                 if not self.locs:
                     return
@@ -354,7 +355,8 @@ class PythonJumpToGlobal(sublime_plugin.TextCommand):
         loc = self.locs[choice]
         with ropemate.context_for(self.view) as context:
             path, line = loc.split(":")
-            path = context.project._get_resource_path(path)
+            if not os.path.isabs(path):
+                path = context.project._get_resource_path(path)
             self.view.window().open_file(
                 "%s:%s" % (path, line),
                 sublime.ENCODED_POSITION
@@ -375,6 +377,9 @@ class AutoImport(threading.Thread):
             self.word = self.view.substr(self.view.word(offset))
 
         threading.Thread.__init__(self)
+        self.candidates = None
+        self.ctx = ropemate.context_for(self.view)
+        self.ctx.__enter__()
 
     def run(self):
         """
@@ -383,13 +388,13 @@ class AutoImport(threading.Thread):
 
         def show_quick_pane():
             self.view.window().show_quick_panel(
-                map(lambda c: [c[0], c[1]], self.candidates),
+                [[c[0], c[1]] for c in self.candidates],
                 self._on_select_global, sublime.MONOSPACE_FONT
             )
 
-        with ropemate.context_for(self.view) as context:
-            self.candidates = list(context.importer.import_assist(self.word))
-            sublime.set_timeout(show_quick_pane, 0)
+        self.candidates = list(self.ctx.importer.import_assist(self.word))
+        self.ctx.__exit__(None, None, None)
+        sublime.set_timeout(show_quick_pane, 0)
 
     def _on_select_global(self, choice):
         if choice is not -1:
@@ -461,13 +466,13 @@ class AbstractPythonRefactoring(object):
             self.view.window().open_file(path, sublime.ENCODED_POSITION)
 
     def default_input(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_changes(self, input_str):
-        raise NotImplemented
+        raise NotImplementedError
 
     def create_refactoring_operation(self, project, resource, start, end):
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class PythonRefactorRename(AbstractPythonRefactoring,
@@ -558,7 +563,6 @@ class PythonRefactorInlineVariable(AbstractPythonRefactoring,
 
 class PythonRefactorRestructure(sublime_plugin.TextCommand):
     '''Reestruture coincidences'''
-
     def run(self, edit, block=False):
         self.messages = ['Pattern', 'Goal', 'Args']
         self.defaults = ["${}", "${}", "{'': 'name='}"]
@@ -574,8 +578,8 @@ class PythonRefactorRestructure(sublime_plugin.TextCommand):
 
     def get_goal(self, input_str):
         if input_str in self.defaults:
-            sublime.status_message('You have to provide a valid pattern for this'
-                ' restructure. Cancelling...')
+            sublime.status_message('You have to provide a valid pattern'
+                ' for this restructure. Cancelling...')
             return
 
         self.args.append(str(input_str))
@@ -586,8 +590,8 @@ class PythonRefactorRestructure(sublime_plugin.TextCommand):
 
     def get_args(self, input_str):
         if input_str in self.defaults:
-            sublime.status_message('You have to provide valid arguments for this'
-                ' restructure. Cancelling...')
+            sublime.status_message('You have to provide valid arguments'
+                ' for this restructure. Cancelling...')
             return
 
         self.args.append(str(input_str))
@@ -598,8 +602,8 @@ class PythonRefactorRestructure(sublime_plugin.TextCommand):
 
     def process_args(self, input_str):
         if input_str in self.defaults:
-            sublime.status_message('You have to provide valid arguments for this'
-                ' restructure. Cancelling...')
+            sublime.status_message('You have to provide valid arguments'
+                ' for this restructure. Cancelling...')
             return
 
         try:
