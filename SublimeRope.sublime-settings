@@ -20,5 +20,6 @@
     //          ]
     //      }
     "autoimport_modules": [],
-    "pyflakes_linting": true
+    "pyflakes_linting": true,
+    "complete_as_you_type": true
 }

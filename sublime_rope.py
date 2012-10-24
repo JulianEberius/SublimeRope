@@ -183,8 +183,26 @@ class PythonEventListener(sublime_plugin.EventListener):
                 resources=[context.resource])
 
 
+class PythonManualCompletionRequest(sublime_plugin.TextCommand):
+    '''Used to request a full autocompletion when
+    complete_as_you_type is turned off'''
+    def run(self, edit, block=False):
+        PythonCompletions.user_requested = True
+        self.view.run_command('hide_auto_complete')
+        sublime.set_timeout(self.show_auto_complete,50)
+
+    def show_auto_complete(self):
+        self.view.run_command('auto_complete', {
+                            'disable_auto_insert': True,
+                            'api_completions_only': True,
+                            'next_completion_if_showing': False
+                        })
+
+
 class PythonCompletions(sublime_plugin.EventListener):
     ''''Provides rope completions for the ST2 completion system.'''
+    user_requested = False
+
     def __init__(self):
         s = sublime.load_settings("SublimeRope.sublime-settings")
         s.add_on_change("suppress_word_completions", self.load_settings)
@@ -192,21 +210,24 @@ class PythonCompletions(sublime_plugin.EventListener):
         s.add_on_change("use_simple_completion", self.load_settings)
         s.add_on_change("add_parameter_snippet", self.load_settings)
         s.add_on_change("use_autoimport_improvements", self.load_settings)
+        s.add_on_change("complete_as_you_type", self.load_settings)
         self.load_settings(s)
 
     def load_settings(self, settings=None):
         if not settings:
             settings = sublime.load_settings("SublimeRope.sublime-settings")
         self.suppress_word_completions = settings.get(
-            "suppress_word_completions")
+            "suppress_word_completions", False)
         self.suppress_explicit_completions = settings.get(
-            "suppress_explicit_completions")
+            "suppress_explicit_completions", False)
         self.use_simple_completion = settings.get(
-            "use_simple_completion")
+            "use_simple_completion", False)
         self.add_parameter_snippet = settings.get(
-            "add_parameter_snippet")
+            "add_parameter_snippet", True)
         self.use_autoimport_improvements = settings.get(
-            "use_autoimport_improvements")
+            "use_autoimport_improvements", False)
+        self.complete_as_you_type = settings.get(
+            "complete_as_you_type", True)
 
     def proposal_string(self, p):
         if p.parameters:
@@ -240,6 +261,9 @@ class PythonCompletions(sublime_plugin.EventListener):
     def on_query_completions(self, view, prefix, locations):
         if not view.match_selector(locations[0], "source.python"):
             return []
+        if not (self.complete_as_you_type or PythonCompletions.user_requested):
+            return []
+        PythonCompletions.user_requested = False
 
         with ropemate.context_for(view) as context:
             loc = locations[0]
