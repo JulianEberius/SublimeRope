@@ -3,6 +3,7 @@
     "suppress_explicit_completions": false,
     "use_simple_completion": false,
     "add_parameter_snippet": true,
+    "use_autoimport_improvements": true,
     // non-trivial / nested modules have to be added with ".*", e.g. "numpy.*"
     // You can specify "autoimport_modules" in your project settings as project
     // specific opions. Navigate to Project->Edit Project and add your modules
