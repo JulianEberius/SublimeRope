@@ -19,6 +19,7 @@ from rope.refactor.rename import Rename
 from rope.refactor.extract import ExtractMethod, ExtractVariable
 from rope.refactor.inline import InlineVariable
 from rope.refactor.restructure import Restructure
+from rope.refactor import ImportOrganizer
 from rope.base.exceptions import ModuleSyntaxError
 from rope.base.taskhandle import TaskHandle
 from rope.base.pycore import ModuleNotFoundError
@@ -71,14 +72,15 @@ class PyFlakesChecker(threading.Thread):
         by_line = lambda e: e.lineno
         errors = sorted(errors, key=by_line)
         errors_by_line = {}
-        for k,g in itertools.groupby(errors, by_line):
+        for k, g in itertools.groupby(errors, by_line):
             errors_by_line[k] = list(g)
         self.errors = errors
         ERRORS_BY_LINE[self.view_id] = errors_by_line
         sublime.set_timeout(self.on_validation_finished, 0)
 
     def on_validation_finished(self):
-        self.visualize_errors()
+        if get_setting("pyflakes_linting"):
+            self.visualize_errors()
         for error in self.errors:
             if isinstance(error, pyflakes.messages.UndefinedName) and\
                     get_setting('use_autoimport_improvements'):
@@ -111,7 +113,6 @@ class PyFlakesChecker(threading.Thread):
             self.view.erase_status('sublimerope-errors')
             self.view.set_status('sublimerope-errors', msg)
 
-
     def visualize_errors(self):
         self.view.erase_regions('sublimerope-errors')
         errors_by_line = ERRORS_BY_LINE[self.view.id()]
@@ -122,6 +123,7 @@ class PyFlakesChecker(threading.Thread):
         self.view.add_regions(
             'sublimerope-errors', outlines, 'keyword', 'dot',
             PyFlakesChecker.drawType)
+
 
 class PyFlakesListener(sublime_plugin.EventListener):
     '''Check for changes on file to perform auto import operations'''
@@ -189,7 +191,7 @@ class PythonManualCompletionRequest(sublime_plugin.TextCommand):
     def run(self, edit, block=False):
         PythonCompletions.user_requested = True
         self.view.run_command('hide_auto_complete')
-        sublime.set_timeout(self.show_auto_complete,50)
+        sublime.set_timeout(self.show_auto_complete, 50)
 
     def show_auto_complete(self):
         self.view.run_command('auto_complete', {
@@ -507,6 +509,37 @@ class PythonAutoImport(sublime_plugin.TextCommand):
         AutoImport(self.view).start()
 
 
+class PythonOrganizeImports(sublime_plugin.TextCommand):
+    """Reorganize imports to follow PEP(8)"""
+
+    def run(self, edit):
+        class Worker(threading.Thread):
+
+            def __init__(self, view, context, changes):
+                self.view = view
+                self.context = context
+                self.changes = changes
+                self.handler = TaskHandle(name='organizer_imports_handler')
+                self.handler.add_observer(self.finish)
+                threading.Thread.__init__(self)
+
+            def run(self):
+                self.context.project.do(self.changes, task_handle=self.handler)
+
+            def finish(self):
+                percent_done = self.handler.current_jobset().get_percent_done()
+                if percent_done == 100:
+                    self.view.run_command('revert')
+
+        with ropemate.context_for(self.view) as context:
+            self.view.run_command("save")
+            organizer = ImportOrganizer(context.project)
+            changes = organizer.organize_imports(context.resource)
+
+            if changes is not None:
+                Worker(self.view, context, changes).start()
+
+
 class AbstractPythonRefactoring(object):
     '''Some common functionality for the rope refactorings.
     Implement __init__, default_input, get_changes and
@@ -652,7 +685,6 @@ class PythonRefactorRestructure(sublime_plugin.TextCommand):
         self.args = []
 
         self.view.run_command("save")
-        self.original_loc = self.view.rowcol(self.view.sel()[0].a)
         self._window = self.view.window()
         self._window.show_input_panel(
             self.messages[0], self.defaults[0], self.get_goal,

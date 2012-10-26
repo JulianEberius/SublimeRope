@@ -46,5 +46,9 @@
     {
         "caption": "Rope: Regenerate Global Module Cache",
         "command": "python_generate_modules_cache"
+    },
+    {
+        "caption": "Rope: Organize Imports",
+        "command": "python_organize_imports"
     }
 ]
