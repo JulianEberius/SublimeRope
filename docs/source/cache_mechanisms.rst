@@ -17,7 +17,7 @@ This action can be archieved using the ST2 Command Palette.
 The old way: editing Rope python path
 =====================================
 .. warning::
-    This is *NOT* the recommended way of settings cache for get all auto completions working.
+    This is *NOT* the recommended way of settings cache to get all auto completions working anymore.
 
 Basically, anything you want completions for (or auto import, jump to globals, documentation) has to be in the Rope's python path. You can extend the Rope's python path editing the ``.ropeproject/config.py`` (If you don't know what ``.ropeproject`` directory is you should look at :ref:`create_project`)
 

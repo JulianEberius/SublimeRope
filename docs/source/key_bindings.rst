@@ -60,4 +60,9 @@ SublimeRope provides no default keybindings at the moment, so you need to set th
         [
             { "key": "selector", "operator": "equal", "operand": "source.python"}
         ]
-    }
+    },
+    { "keys": ["ctrl+alt+space"], "command": "python_manual_completion_request", "context":
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.python" }
+        ]
+    },

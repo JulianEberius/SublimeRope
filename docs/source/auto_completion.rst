@@ -12,17 +12,24 @@ ST2 offers three types of completions itself:
 
 .. note::
 
-    Some people prefer to disable the default word and/or explicit completions that ST2 offers while using SublimeRope. This can be archieved by setting either of the following settings to ``true`` in the User Settings for SublimeRope settings in your ST2 Preferences Menú.
+    Some people prefer to disable the default word and/or explicit completions that ST2 offers while using SublimeRope. This can be achieved by setting either of the following settings to ``true`` in the User Settings for SublimeRope settings in your ST2 Preferences Menú.
 
     * ``suppress_word_completions``
     * ``suppress_explicit_completions``
+
+Manual Completions
+==================
+
+On larger projects, generating the completion proposals can take a noticeable amount of time. Waiting half a second is no problem usually, but with ST2 automatic as-you-type completions it can slow down your typing.
+Just set the "complete_as_you_type" option in your SublimeRope.sublime_settings or in your project settings as "rope_complete_as_you_type" to false, and you will only get the lightning fast buffer-based completions from ST2. Then you can manually trigger the more intelligent Rope-based completions using the "PythonManualCompletionRequestCommand".
+Bind it to some nice key, e.g. ctrl+alt+space, and you can get them easily when you need them.
 
 Simple Completion
 =================
 
 SublimeRope provides completion suggestions based on the rope library, but also offers a fall-back method if rope suggest nothing. Albeit it is sometimes useful, it is disabled by default because some users feels that it slows down the plugin too much.
 
-You can enbale it setting ``use_simple_completion`` to true in SublimeRope settings file.
+You can enable it setting ``use_simple_completion`` to true in SublimeRope settings file.
 
 Howto get autocompletion on dot typing?
 ===========================================
