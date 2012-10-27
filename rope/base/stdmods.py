@@ -6,6 +6,7 @@ from rope.base import utils
 
 std_lib_path = None
 
+
 def _stdlib_path():
     if not std_lib_path:
         global std_lib_path
@@ -19,15 +20,17 @@ def _stdlib_path():
             std_lib_path = os.path.dirname(inspect.getsourcefile(inspect))
     return std_lib_path
 
+
 @utils.cached(1)
 def standard_modules():
     return python_modules() | dynload_modules()
+
 
 @utils.cached(1)
 def python_modules():
     result = set()
     lib_path = _stdlib_path()
-    if os.path.exists(lib_path):
+    if not lib_path.endswith('.zip') and os.path.exists(lib_path):
         for name in os.listdir(lib_path):
             path = os.path.join(lib_path, name)
             if os.path.isdir(path):
@@ -37,6 +40,7 @@ def python_modules():
                 if name.endswith('.py'):
                     result.add(name[:-3])
     return result
+
 
 @utils.cached(1)
 def dynload_modules():
