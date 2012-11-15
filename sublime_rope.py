@@ -25,7 +25,7 @@ from rope.refactor.restructure import Restructure
 
 # always import the bundled rope
 SUBLIME_ROPE_PATH = os.path.dirname(
-                                os.path.normpath(os.path.abspath(__file__)))
+    os.path.normpath(os.path.abspath(__file__)))
 sys.path.insert(0, SUBLIME_ROPE_PATH)
 
 
@@ -231,8 +231,8 @@ class AutoImport(threading.Thread):
             name, module = self.candidates[choice]
             with ropemate.context_for(self.view) as context:
                 # check whether adding an import is necessary, and where
-                all_lines = self.view.lines(sublime.Region(0, self.view.size())
-                )
+                all_lines = self.view.lines(
+                    sublime.Region(0, self.view.size()))
                 line_no = context.importer.find_insertion_line(context.input)
                 insert_import_str = "from %s import %s\n" % (module, name)
                 existing_imports_str = self.view.substr(
@@ -261,7 +261,7 @@ class SublimeRopeListener(sublime_plugin.EventListener):
     def __init__(self):
         super(SublimeRopeListener, self).__init__()
         self.use_autoimport_improvements = get_setting(
-                                        'use_autoimport_improvements', False)
+            'use_autoimport_improvements', False)
         s = sublime.load_settings("SublimeRope.sublime-settings")
         s.add_on_change("suppress_word_completions", self.load_settings)
         s.add_on_change("suppress_explicit_completions", self.load_settings)
@@ -299,7 +299,7 @@ class SublimeRopeListener(sublime_plugin.EventListener):
             result = p.name
 
         return '{result}\t({scope}, {type})'.format(
-                                    result=result, scope=p.scope, type=p.type)
+            result=result, scope=p.scope, type=p.type)
 
     def insert_string(self, p):
         if p.parameters and not p.from_X_import:
@@ -371,10 +371,11 @@ class SublimeRopeListener(sublime_plugin.EventListener):
         a package as completion options'''
         if hasattr(module, "__path__"):
             result = []
-            in_dir_names = [os.path.split(n)[1]
-                for n in glob.glob(os.path.join(module.__path__[0], "*"))]
-            in_dir_names = set(os.path.splitext(n)[0]
-                for n in in_dir_names if "__init__" not in n)
+            in_dir_names = [os.path.split(n)[1] for n in glob.glob(
+                os.path.join(module.__path__[0], "*"))]
+            in_dir_names = set(
+                os.path.splitext(n)[0] for n in in_dir_names
+                if "__init__" not in n)
             for n in in_dir_names:
                 result.append(rope.contrib.codeassist.CompletionProposal(
                     n, "imported", rope.base.pynames.UnboundName()))
@@ -447,7 +448,7 @@ class SublimeRopeListener(sublime_plugin.EventListener):
 
     def on_selection_modified(self, view):
         if (not 'Python' in view.settings().get('syntax')
-                                or not get_setting('pyflakes_linting', False)):
+                or not get_setting('pyflakes_linting', False)):
             return
 
         vid = view.id()
@@ -467,7 +468,7 @@ class SublimeRopeListener(sublime_plugin.EventListener):
 
     def _check(self, view):
         if not (get_setting('use_autoimport_improvements', False)
-                            or not get_setting('pyflakes_linting', False)):
+                or not get_setting('pyflakes_linting', False)):
             return
 
         PyFlakesChecker(
@@ -563,7 +564,7 @@ class PythonJumpToGlobal(sublime_plugin.TextCommand):
             selected_global = self.names[choice]
             with ropemate.context_for(self.view) as context:
                 self.locs = context.importer.get_name_locations(
-                                                            selected_global)
+                    selected_global)
                 self.locs = [loc_to_str(l) for l in self.locs]
 
                 if not self.locs:
@@ -616,7 +617,7 @@ class PythonOrganizeImports(sublime_plugin.TextCommand):
             def finish(self):
                 percent_done = self.handler.current_jobset().get_percent_done()
                 if percent_done == 100:
-                    self.view.run_command('revert')
+                    sublime.set_timeout(self.view.run_command('revert'), 10)
 
         with ropemate.context_for(self.view) as context:
             self.view.run_command("save")
@@ -628,7 +629,7 @@ class PythonOrganizeImports(sublime_plugin.TextCommand):
 
 
 class PythonRefactorRename(AbstractPythonRefactoring,
-    sublime_plugin.TextCommand):
+                           sublime_plugin.TextCommand):
     '''Renames the identifier under the cursor throughout the project'''
     def __init__(self, *args, **kwargs):
         AbstractPythonRefactoring.__init__(self, message="New name")
@@ -650,7 +651,7 @@ class PythonRefactorRename(AbstractPythonRefactoring,
 
 
 class PythonRefactorExtractMethod(AbstractPythonRefactoring,
-    sublime_plugin.TextCommand):
+                                  sublime_plugin.TextCommand):
     '''Creates a new function or method (depending on the context) from the
     selected lines'''
     def __init__(self, *args, **kwargs):
@@ -668,7 +669,7 @@ class PythonRefactorExtractMethod(AbstractPythonRefactoring,
 
 
 class PythonRefactorExtractVariable(AbstractPythonRefactoring,
-    sublime_plugin.TextCommand):
+                                    sublime_plugin.TextCommand):
     '''Creates a new variable from the selected lines'''
     def __init__(self, *args, **kwargs):
         AbstractPythonRefactoring.__init__(self, message="New variable name")
@@ -685,12 +686,11 @@ class PythonRefactorExtractVariable(AbstractPythonRefactoring,
 
 
 class PythonRefactorInlineVariable(AbstractPythonRefactoring,
-    sublime_plugin.TextCommand):
+                                   sublime_plugin.TextCommand):
     '''Inline the current variable'''
     def __init__(self, *args, **kwargs):
         AbstractPythonRefactoring.__init__(self,
-            message='Inline all occurred?'
-        )
+                                           message='Inline all occurred?')
         sublime_plugin.TextCommand.__init__(self, *args, **kwargs)
 
     def default_input(self):
@@ -729,7 +729,8 @@ class PythonRefactorRestructure(sublime_plugin.TextCommand):
 
     def get_goal(self, input_str):
         if input_str in self.defaults:
-            sublime.status_message('You have to provide a valid pattern'
+            sublime.status_message(
+                'You have to provide a valid pattern'
                 ' for this restructure. Cancelling...')
             return
 
@@ -741,7 +742,8 @@ class PythonRefactorRestructure(sublime_plugin.TextCommand):
 
     def get_args(self, input_str):
         if input_str in self.defaults:
-            sublime.status_message('You have to provide valid arguments'
+            sublime.status_message(
+                'You have to provide valid arguments'
                 ' for this restructure. Cancelling...')
             return
 
@@ -753,15 +755,17 @@ class PythonRefactorRestructure(sublime_plugin.TextCommand):
 
     def process_args(self, input_str):
         if input_str in self.defaults:
-            sublime.status_message('You have to provide valid arguments'
+            sublime.status_message(
+                'You have to provide valid arguments'
                 ' for this restructure. Cancelling...')
             return
 
         try:
             self.args.append(ast.literal_eval(input_str))
         except:
-            sublime.error_message("Malformed string detected in Args.\n\n"
-                "The Args value must be a Python dictionary")
+            sublime.error_message(
+                'Malformed string detected in Args.\n\n'
+                'The Args value must be a Python dictionary')
             return
 
         with ropemate.context_for(self.view) as context:
@@ -827,8 +831,8 @@ class PythonGenerateModulesCache(sublime_plugin.TextCommand):
             ctx = ropemate.context_for(self.view)
             ctx.building = True
             ctx.__enter__()
-            thread = PythonGenerateModulesCache.GenerateModulesCache(ctx,
-                                                                    modules)
+            thread = PythonGenerateModulesCache.GenerateModulesCache(
+                ctx, modules)
             thread.start()
         else:
             sublime.error_message("Missing modules in configuration file")
@@ -937,7 +941,7 @@ class RopeNewProject(sublime_plugin.WindowCommand):
 
         if not len(site_p_dir) == 1:
             sublime.error_message(message.format(path=path,
-                                                platform_path=platform_path))
+                                                 platform_path=platform_path))
             virtualenv = None
         else:
             virtualenv = site_p_dir[0]
