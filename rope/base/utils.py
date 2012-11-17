@@ -1,4 +1,5 @@
 import warnings
+import functools
 
 
 def saveit(func):
@@ -58,6 +59,35 @@ def cached(count):
     def decorator(func):
         return _Cached(func, count)
     return decorator
+
+
+def weight_cache(func):
+    """
+    Cache the results of the function if the same positional arguments
+    are provided.
+
+    We only cache 1MB, after that we should perform FIFO queries until the size
+    of the dict is lower than 1MB
+    """
+
+    cache = list()
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        for rex in cache:
+            if args == rex[0]:
+                return rex[1]
+
+        result = func(*args, **kwargs)
+        cache.append((args, result))
+
+        while cache.__sizeof__() >= 1048576:  # 1MB in bytes
+            cache.pop(0)
+
+        return result
+
+    return wrapper
+
 
 class _Cached(object):
 

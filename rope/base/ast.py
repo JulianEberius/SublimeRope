@@ -1,41 +1,13 @@
 import _ast
-import functools
 from _ast import *
 
 from rope.base import fscommands
+from rope.base.utils import weight_cache
 
 
-# decorator to cache ast
-def cache(func):
-    """
-    Cache the results of the function if the same positional arguments
-    are provided.
-
-    We only cache 1MB, after that we should perform FIFO queries until the size
-    of the dict is lower than 1MB
-    """
-
-    cache = list()
-
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        for rex in cache:
-            if args == rex[0]:
-                return rex[1]
-
-        result = func(*args, **kwargs)
-        cache.append((args, result))
-
-        while cache.__sizeof__() >= 1048576:  # 1MB in bytes
-            cache.pop(0)
-
-        return result
-
-    return wrapper
-
-
-@cache
+@weight_cache
 def parse(source, filename='<string>'):
+    print 'AST PUTAZO!'
     # NOTE: the raw string should be given to `compile` function
     if isinstance(source, unicode):
         source = fscommands.unicode_to_file_data(source)
