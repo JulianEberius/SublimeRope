@@ -400,6 +400,7 @@ class SublimeRopeListener(sublime_plugin.EventListener):
                     context.project, context.input, loc, context.resource,
                     maxfixes=3, later_locals=False
                 )
+
             except ModuleSyntaxError:
                 raw_proposals = []
 
@@ -411,9 +412,17 @@ class SublimeRopeListener(sublime_plugin.EventListener):
                     identifier = identifier.split(' ')[-1]
                 raw_proposals = self.simple_module_completion(view, identifier)
 
+
+        # do not use rope's own sorting for large results, it is very slow!
+        # simple sort-by-name is good enough
+        if len(raw_proposals) <= 20:
+            sorted_proposals = codeassist.sorted_proposals(raw_proposals)
+        else:
+            sorted_proposals = sorted(raw_proposals, key=lambda p: p.name)
+
         proposals = [
             (self.proposal_string(p), self.insert_string(p))
-            for p in codeassist.sorted_proposals(raw_proposals)
+            for p in sorted_proposals
             if p.name != 'self='
         ]
 
@@ -423,7 +432,6 @@ class SublimeRopeListener(sublime_plugin.EventListener):
             completion_flags = sublime.INHIBIT_WORD_COMPLETIONS
         if self.suppress_explicit_completions:
             completion_flags |= sublime.INHIBIT_EXPLICIT_COMPLETIONS
-
         return (proposals, completion_flags)
 
     def on_load(self, view):
