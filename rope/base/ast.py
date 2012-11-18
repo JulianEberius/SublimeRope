@@ -7,7 +7,6 @@ from rope.base.utils import weight_cache
 
 @weight_cache
 def parse(source, filename='<string>'):
-    print 'AST PUTAZO!'
     # NOTE: the raw string should be given to `compile` function
     if isinstance(source, unicode):
         source = fscommands.unicode_to_file_data(source)
