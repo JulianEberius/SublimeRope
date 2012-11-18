@@ -31,7 +31,7 @@ SublimeRope provides completion suggestions based on the rope library, but also 
 
 You can enable it setting ``use_simple_completion`` to true in SublimeRope settings file.
 
-Howto get autocompletion on dot typing?
+How to get autocompletion on dot typing?
 ===========================================
 
 Some users want SublimeRope shown the completions just after typing the dot in for example  ``os.``, ST2 gives us a simple way to setup this desirable behavior.

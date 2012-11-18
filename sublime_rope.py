@@ -52,7 +52,7 @@ ERRORS_BY_LINE = {}
 
 
 # =============================================================================
-# Auxiliar classes should be located here
+# Auxiliar classes
 # =============================================================================
 class AbstractPythonRefactoring(object):
     '''Some common functionality for the rope refactorings.
@@ -106,7 +106,7 @@ class AbstractPythonRefactoring(object):
 
 
 # =============================================================================
-# Thread classes should be located here
+# Thread classes
 # =============================================================================
 class PyFlakesChecker(threading.Thread):
     '''PyFlakes Checker'''
@@ -123,11 +123,10 @@ class PyFlakesChecker(threading.Thread):
         errors = []
 
         try:
-            tree = parse(self.code, self.filename)
+            tree = parse(self.code, filename=self.filename)
         except (SyntaxError, IndentationError, ValueError), e:
             self.syntax_error = e
-            if get_setting('pyflakes_linting', False):
-                sublime.set_timeout(self.handle_syntax_error, 0)
+            sublime.set_timeout(self.handle_syntax_error, 0)
             return
         else:
             errors.extend(pyflakes.Checker(tree, self.filename).messages)
@@ -151,6 +150,8 @@ class PyFlakesChecker(threading.Thread):
                 break
 
     def handle_syntax_error(self):
+        if not get_setting('pyflakes_linting', False):
+            return
         e = self.syntax_error
         msg = e.args[0]
         (lineno, offset, text) = e.lineno, e.offset, e.text
@@ -187,9 +188,12 @@ class PyFlakesChecker(threading.Thread):
         outlines = [self.view.line(self.view.text_point(lineno - 1, 0))
                     for lineno in errors_by_line.keys()]
 
-        self.view.add_regions(
-            'sublimerope-errors', outlines, 'keyword', 'dot',
-            PyFlakesChecker.drawType)
+        if outlines:
+            self.view.add_regions(
+                'sublimerope-errors', outlines, 'keyword', 'dot',
+                PyFlakesChecker.drawType)
+        else:
+            self.view.erase_regions("sublimerope-errors")
 
 
 class AutoImport(threading.Thread):
@@ -211,10 +215,6 @@ class AutoImport(threading.Thread):
         self.ctx.__enter__()
 
     def run(self):
-        """
-        Starts the thread
-        """
-
         def show_quick_pane():
             if self.view.window():
                 self.view.window().show_quick_panel(
@@ -248,7 +248,7 @@ class AutoImport(threading.Thread):
 
 
 # =============================================================================
-# Event Listeners should be located here
+# Event Listeners
 # =============================================================================
 class SublimeRopeListener(sublime_plugin.EventListener):
     """Main Plugin Listener
@@ -483,7 +483,7 @@ class SublimeRopeListener(sublime_plugin.EventListener):
 
 
 # =============================================================================
-# TextCommands classes should be located here
+# TextCommands classes
 # =============================================================================
 class PythonManualCompletionRequest(sublime_plugin.TextCommand):
     '''Used to request a full autocompletion when
@@ -615,6 +615,7 @@ class PythonOrganizeImports(sublime_plugin.TextCommand):
                 self.context.project.do(self.changes, task_handle=self.handler)
 
             def finish(self):
+
                 percent_done = self.handler.current_jobset().get_percent_done()
                 if percent_done == 100:
                     sublime.set_timeout(self.view.run_command('revert'), 10)
@@ -864,11 +865,11 @@ class PythonRegenerateCache(sublime_plugin.TextCommand):
 
 
 # =============================================================================
-# WindowCommand classes should be located here
+# WindowCommand classes
 # =============================================================================
 class RopeNewProject(sublime_plugin.WindowCommand):
     '''Asks the user for project- and virtualenv directory and creates a
-    configured rpe project with these values'''
+    configured rope project with these values'''
     def run(self):
         folders = self.window.folders()
         suggested_folder = folders[0] if folders else os.path.expanduser("~")
