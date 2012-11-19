@@ -488,6 +488,8 @@ class SublimeRopeListener(sublime_plugin.EventListener):
 
     def _regenerate_cache(self, view):
         with ropemate.context_for(view) as context:
+            # TODO: general solution to syncronizing SublimeRope and Rope (Rope's observers, keep one project open)
+            context.project.pycore._invalidate_resource_cache(context.resource)
             context.importer.generate_cache(resources=[context.resource])
 
 
