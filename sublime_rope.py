@@ -261,8 +261,6 @@ class SublimeRopeListener(sublime_plugin.EventListener):
 
     def __init__(self):
         super(SublimeRopeListener, self).__init__()
-        self.use_autoimport_improvements = get_setting(
-            'use_autoimport_improvements', False)
         s = sublime.load_settings("SublimeRope.sublime-settings")
         s.add_on_change("suppress_word_completions", self.load_settings)
         s.add_on_change("suppress_explicit_completions", self.load_settings)
@@ -270,6 +268,7 @@ class SublimeRopeListener(sublime_plugin.EventListener):
         s.add_on_change("add_parameter_snippet", self.load_settings)
         s.add_on_change("use_autoimport_improvements", self.load_settings)
         s.add_on_change("complete_as_you_type", self.load_settings)
+        s.add_on_change("case_sensitive_completion", self.load_settings)
         self.load_settings(s)
 
     def load_settings(self, settings=None):
@@ -288,6 +287,8 @@ class SublimeRopeListener(sublime_plugin.EventListener):
             "use_autoimport_improvements", False)
         self.complete_as_you_type = settings.get(
             "complete_as_you_type", True)
+        self.case_sensitive_completion = settings.get(
+            "case_sensitive_completion", True)
 
     def proposal_string(self, p):
         if p.parameters:
@@ -399,7 +400,8 @@ class SublimeRopeListener(sublime_plugin.EventListener):
             try:
                 raw_proposals = codeassist.code_assist(
                     context.project, context.input, loc, context.resource,
-                    maxfixes=3, later_locals=False
+                    maxfixes=3, later_locals=False,
+                    case_sensitive=self.case_sensitive_completion
                 )
 
             except ModuleSyntaxError:
@@ -788,7 +790,11 @@ class PythonRefactorRestructure(sublime_plugin.TextCommand):
 
             try:
                 context.project.do(self.changes)
-                sublime.error_message(self.changes.get_description())
+                # sublime.error_message(self.changes.get_description())
+                print "RESTRUCTURING CHANGES PERFORMED"
+                print "-------------------------------"
+                print self.changes.get_description()
+                print "-------------------------------"
             except ModuleNotFoundError, e:
                 sublime.error_message(e)
 

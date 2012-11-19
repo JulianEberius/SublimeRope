@@ -21,5 +21,6 @@
     //      }
     "autoimport_modules": [],
     "pyflakes_linting": true,
-    "complete_as_you_type": true
+    "complete_as_you_type": true,
+    "case_sensitive_completion": true
 }
