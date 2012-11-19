@@ -143,11 +143,12 @@ class PyFlakesChecker(threading.Thread):
     def on_validation_finished(self):
         if get_setting("pyflakes_linting"):
             self.visualize_errors()
-        for error in self.errors:
-            if isinstance(error, pyflakes.messages.UndefinedName) and\
-                    get_setting('use_autoimport_improvements'):
-                AutoImport(self.view, error.message_args[0]).start()
-                break
+
+        if get_setting('use_autoimport_improvements'):
+            for error in self.errors:
+                if isinstance(error, pyflakes.messages.UndefinedName):
+                    AutoImport(self.view, error.message_args[0]).start()
+                    break
 
     def handle_syntax_error(self):
         if not get_setting('pyflakes_linting', False):
@@ -476,7 +477,7 @@ class SublimeRopeListener(sublime_plugin.EventListener):
 
     def _check(self, view):
         if not (get_setting('use_autoimport_improvements', False)
-                or not get_setting('pyflakes_linting', False)):
+                or get_setting('pyflakes_linting', False)):
             return
 
         PyFlakesChecker(
