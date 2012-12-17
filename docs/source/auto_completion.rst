@@ -21,7 +21,7 @@ Case-Insensitive Completions
 ==================
 
 Some users prefer to get more completion proposals by ignoring case of what they type and what Rope has indexed.
-By settings ``case_sensitive_completion`` to false you can enable this behavior.
+By setting ``case_sensitive_completion`` to false you can enable this behavior.
 For example, when typing "inde" SublimeRope will offer "IndexError".
 
 Manual Completions
