@@ -889,7 +889,15 @@ class RopeNewProject(sublime_plugin.WindowCommand):
     configured rope project with these values'''
     def run(self):
         folders = self.window.folders()
-        suggested_folder = folders[0] if folders else os.path.expanduser("~")
+        if folders:
+            suggested_folder = folders[0]
+        else:
+            current_file = self.window.active_view().file_name()
+            if current_file:
+                suggested_folder = os.path.dirname(current_file)
+            else:
+                suggested_folder = os.path.expanduser("~")
+
         self.window.show_input_panel(
             "Enter project root:", suggested_folder, self.entered_proj_dir,
             None, None)
