@@ -573,7 +573,7 @@ class PythonJumpToGlobal(sublime_plugin.TextCommand):
             resource, line = loc
             return "%s:%s" % (resource.path, line)
 
-        if choice is not -1:
+        if choice != -1:
             selected_global = self.names[choice]
             with ropemate.context_for(self.view) as context:
                 self.locs = context.importer.get_name_locations(
@@ -592,15 +592,16 @@ class PythonJumpToGlobal(sublime_plugin.TextCommand):
                     )
 
     def on_select_location(self, choice):
-        loc = self.locs[choice]
-        with ropemate.context_for(self.view) as context:
-            path, line = loc.split(":")
-            if not os.path.isabs(path):
-                path = context.project._get_resource_path(path)
-            self.view.window().open_file(
-                "%s:%s" % (path, line),
-                sublime.ENCODED_POSITION
-            )
+        if choice != -1:
+            loc = self.locs[choice]
+            with ropemate.context_for(self.view) as context:
+                path, line = loc.split(":")
+                if not os.path.isabs(path):
+                    path = context.project._get_resource_path(path)
+                self.view.window().open_file(
+                    "%s:%s" % (path, line),
+                    sublime.ENCODED_POSITION
+                )
 
 
 class PythonAutoImport(sublime_plugin.TextCommand):
