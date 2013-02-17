@@ -132,7 +132,7 @@ class AutoImport(object):
         try:
             pymodule = self.project.pycore.get_string_module(code)
         except exceptions.ModuleSyntaxError:
-            return 1
+            return 0
         testmodname = '__rope_testmodule_rope'
         importinfo = importutils.NormalImport(((testmodname, None),))
         module_imports = importutils.get_module_imports(
