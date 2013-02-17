@@ -11,6 +11,7 @@ import threading
 
 import rope
 import ropemate
+from utils import get_setting
 from rope.base.ast import parse
 from rope.base.exceptions import ModuleSyntaxError
 from rope.base.pycore import ModuleNotFoundError
@@ -34,17 +35,6 @@ try:
 except ImportError:
     # use our bundled version
     import rope_pyflakes.checker as pyflakes
-
-
-def get_setting(key, default_value=None):
-    try:
-        settings = sublime.active_window().active_view().settings()
-        if settings.has('rope_{0}'.format(key)):
-            return settings.get('rope_{0}'.format(key))
-    except:
-        pass
-    s = sublime.load_settings('SublimeRope.sublime-settings')
-    return s.get(key, default_value)
 
 
 # Global Variable for storing errors found by PyFlask

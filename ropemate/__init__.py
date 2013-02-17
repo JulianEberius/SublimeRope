@@ -4,12 +4,12 @@ import site
 import sublime
 import tempfile
 
+from utils import get_setting
 from rope.base import project, libutils
 from rope.base.fscommands import FileSystemCommands
 from rope.contrib import autoimport
 
 project_cache = {}
-
 
 def context_for(view):
     file_path = view.file_name()
@@ -49,10 +49,11 @@ class RopeContext(object):
             self.file_path = self._create_temp_file()
         self.project_dir = _find_ropeproject(self.file_path)
 
+        class_methods_in_globals = get_setting('include_classmethods_in_globals')
         if not single_file and self.project_dir:
             self.project = project.Project(self.project_dir, fscommands=FileSystemCommands())
             self.importer = autoimport.AutoImport(
-                project=self.project, observe=False)
+                project=self.project, observe=False, class_methods=class_methods_in_globals)
             if os.path.exists("%s/__init__.py" % self.project_dir):
                 sys.path.append(self.project_dir)
         else:
@@ -65,7 +66,7 @@ class RopeContext(object):
                 ropefolder=None, projectroot=folder,
                 ignored_resources=ignored_res, fscommands=FileSystemCommands())
             self.importer = autoimport.AutoImport(
-                project=self.project, observe=False)
+                project=self.project, observe=False, class_methods=class_methods_in_globals)
 
     def __enter__(self):
         self.resource = libutils.path_to_resource(self.project, self.file_path)
