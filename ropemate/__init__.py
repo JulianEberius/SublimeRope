@@ -49,7 +49,7 @@ class RopeContext(object):
             self.file_path = self._create_temp_file()
         self.project_dir = _find_ropeproject(self.file_path)
 
-        class_methods_in_globals = get_setting('include_classmethods_in_globals')
+        class_methods_in_globals = get_setting('include_classmethods_in_globals', False)
         if not single_file and self.project_dir:
             self.project = project.Project(self.project_dir, fscommands=FileSystemCommands())
             self.importer = autoimport.AutoImport(
