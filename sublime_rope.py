@@ -850,6 +850,7 @@ class PythonGenerateModulesCache(sublime_plugin.TextCommand):
             ctx = ropemate.context_for(self.view)
             ctx.building = True
             ctx.__enter__()
+            ctx.importer.class_methods = get_setting('include_classmethods_in_globals')
             thread = PythonGenerateModulesCache.GenerateModulesCache(
                 ctx, modules)
             thread.start()
@@ -878,6 +879,7 @@ class PythonRegenerateCache(sublime_plugin.TextCommand):
         ctx.building = True
         # we have to enter on main, but build on worker thread
         ctx.__enter__()
+        ctx.importer.class_methods = get_setting('include_classmethods_in_globals')
         thread = PythonRegenerateCache.RegenerateCacheThread(ctx)
         thread.start()
 

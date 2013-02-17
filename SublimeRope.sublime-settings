@@ -22,5 +22,11 @@
     "autoimport_modules": [],
     "pyflakes_linting": true,
     "complete_as_you_type": true,
-    "case_sensitive_completion": true
+    "case_sensitive_completion": true,
+
+    // If true, class properties/methods will be included in the 'jump-to-global' list,
+    // in addition to the module-level objects (similar to Eclipse's globals browser).
+    // Requires a re-gen of the cache if this setting is changed.
+    // Note: slightly shower since there are more objects to index
+    "include_classmethods_in_globals": false
 }
