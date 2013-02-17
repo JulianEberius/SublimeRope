@@ -97,11 +97,7 @@ class AutoImport(object):
         return result
 
     def get_classmethods_from_module(self, pymodule, name):
-        if isinstance(pymodule, pyobjects.PyDefinedObject):
-            attributes = pymodule._get_structural_attributes()
-        else:
-            attributes = pymodule.get_attributes()
-
+        attributes = pymodule.get_attributes()
         # the name is listed as Class.method in self.names
         name = name[name.find(".") + 1:]
         for cls in attributes.itervalues():
