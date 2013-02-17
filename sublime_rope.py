@@ -234,7 +234,7 @@ class AutoImport(threading.Thread):
                 # check whether adding an import is necessary, and where
                 all_lines = self.view.lines(
                     sublime.Region(0, self.view.size()))
-                line_no = context.importer.find_insertion_line(context.input)
+                line_no = context.importer.find_insertion_line(context.input) - 1
                 insert_import_str = "from %s import %s\n" % (module, name)
                 existing_imports_str = self.view.substr(
                     sublime.Region(all_lines[0].a, all_lines[line_no - 1].b))
