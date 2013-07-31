@@ -1,7 +1,7 @@
 **SublimeRope**
 ===========================
 
-**Sublime Text 3 Support**: I started a complete rewrite of this plugin for ST3, which is a lot faster and easier to use, although it does not have all the features of SublimeRope yet. It's called SublimePython and you can find it [here](http://github.com/JulianEberius/SublimePython/).
+**Sublime Text 3 Support**: I started a complete rewrite of this plugin for ST3, which is a lot faster and easier to use, although it does not have all the features of SublimeRope yet. It's called SublimePythonIDE and you can find it [here](http://github.com/JulianEberius/SublimePython/).
 
 Adds Python completions and some IDE-like functions to Sublime Text 2, through the use of the [Rope](http://rope.sourceforge.net/) library.
 
