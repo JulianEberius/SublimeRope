@@ -375,11 +375,9 @@ class SublimeRopeListener(sublime_plugin.EventListener):
         return None
 
     def on_query_completions(self, view, prefix, locations):
-        if (
-            not view.match_selector(locations[0], 'source.python') or
-            not (self.complete_as_you_type) or
-            SublimeRopeListener.user_requested
-        ):
+        is_python = view.match_selector(locations[0], 'source.python')
+        do_complete = self.complete_as_you_type or SublimeRopeListener.user_requested
+        if not (is_python and do_complete):
             return []
 
         SublimeRopeListener.user_requested = False
