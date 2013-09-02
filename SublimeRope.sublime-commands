@@ -50,5 +50,9 @@
     {
         "caption": "Rope: Organize Imports",
         "command": "python_organize_imports"
+    },
+    {
+        "caption": "Rope: Manual Completion",
+        "command": "python_manual_completion_request"
     }
 ]
